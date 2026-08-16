@@ -16,23 +16,10 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Load whitelist
+-- Load whitelist from GitHub
 local Whitelist = loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/whitelist.lua"))()
 
--- DEBUG: Show current username and expected key
-local username = plr.Name
-local expectedKey = Whitelist[username] or "Not in whitelist"
-
-stgui:SetCore("SendNotification", {
-    Title = "[DEBUG] Whitelist info",
-    Text = "Username: " .. username .. "\nExpected key: " .. expectedKey,
-    Duration = 8,
-    Button1 = "OK"
-})
-
-print("DEBUG: Your username is:", username)
-print("DEBUG: Expected key in whitelist:", expectedKey)
-
+-- Check if user is whitelisted and key matches
 local function checkWhitelist(username, key)
     if Whitelist and Whitelist[username] then
         return Whitelist[username] == key
@@ -40,7 +27,7 @@ local function checkWhitelist(username, key)
     return false
 end
 
--- UI (same as before)
+-- UI (claysPerk)
 local Window = Fluent:CreateWindow({
     Title = "claysPerk " .. Fluent.Version,
     SubTitle = "by HB_HUB",
@@ -85,18 +72,13 @@ end)
 Tabs.Main:AddButton({
     Title = "Check",
     Callback = function()
-        local entered = scriptkeyInput
-        local user = plr.Name
-        print("DEBUG: Checking key for", user, "entered:", entered)
-        
-        if checkWhitelist(user, entered) then
+        if checkWhitelist(plr.Name, scriptkeyInput) then
             loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
             Window:Destroy()
         else
-            local expected = Whitelist[user] or "(none)"
             Window:Dialog({
                 Title = "Error",
-                Content = "Wrong key or not whitelisted!\n\nYour username: " .. user .. "\nExpected key: " .. expected .. "\nYou entered: " .. entered,
+                Content = "Wrong key or not whitelisted!",
                 Buttons = {
                     {
                         Title = "OK",
