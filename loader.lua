@@ -16,10 +16,10 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Load whitelist from YOUR GitHub
+-- Load whitelist from GitHub
 local Whitelist = loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/whitelist.lua"))()
 
--- Whitelist check
+-- Check if the user is in whitelist and the key matches
 local function checkWhitelist(username, key)
     if Whitelist and Whitelist[username] then
         return Whitelist[username] == key
