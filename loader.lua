@@ -16,10 +16,13 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- CHANGE THIS TO YOUR OWN KEY
+-- YOUR KEY – change this to whatever you want
 local VALID_KEY = "claysretake"
 
--- Create the main window with a sleek dark theme
+-- Initialize global settings (these will be used by main.lua)
+getgenv().AutoDashEnabled = false
+getgenv().DashInterval = 500
+
 local Window = Fluent:CreateWindow({
     Title = "⚡ M1 Hub",
     SubTitle = "by HB_HUB",
@@ -30,7 +33,6 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
--- Tabs
 local Tabs = {
     Key = Window:AddTab({ Title = "🔑 Key", Icon = "key" }),
     Dash = Window:AddTab({ Title = "💨 Dash", Icon = "dash" }),
@@ -55,13 +57,8 @@ local Input = keySection:AddInput("Input", {
     end
 })
 
-Input:OnChanged(function()
-    print("Input updated:", Input.Value)
-end)
-
 local function performCheck()
     if scriptkeyInput == VALID_KEY then
-        -- Load the main script from your GitHub
         loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
         Window:Destroy()
     else
@@ -84,12 +81,11 @@ keySection:AddButton({
 })
 
 -- ============================
--- DASH TAB (Settings for the macro)
+-- DASH TAB
 -- ============================
 local dashSection = Tabs.Dash:AddSection("Dash Configuration")
 
--- Toggle to enable auto-dash
-local autoDashToggle = dashSection:AddToggle("AutoDash", {
+dashSection:AddToggle("AutoDash", {
     Title = "Auto Dash",
     Description = "Automatically performs M1 dash reset",
     Default = false,
@@ -98,8 +94,7 @@ local autoDashToggle = dashSection:AddToggle("AutoDash", {
     end
 })
 
--- Slider for dash interval (in milliseconds)
-local dashInterval = dashSection:AddSlider("DashInterval", {
+dashSection:AddSlider("DashInterval", {
     Title = "Dash Interval (ms)",
     Description = "Delay between each dash",
     Default = 500,
@@ -111,34 +106,22 @@ local dashInterval = dashSection:AddSlider("DashInterval", {
     end
 })
 
--- Add a keybind to toggle auto-dash with a key (optional)
-local dashToggleKey = dashSection:AddKeybind("DashToggleKey", {
-    Title = "Toggle Auto-Dash Key",
-    Default = Enum.KeyCode.F,
-    Callback = function(Key, Mode)
-        if Mode == Enum.KeyCode.F then
-            autoDashToggle:SetValue(not autoDashToggle.Value)
-        end
-    end
-})
-
 -- ============================
 -- INFO TAB
 -- ============================
 local infoSection = Tabs.Info:AddSection("About")
 infoSection:AddParagraph({
     Title = "M1 Reset Hub",
-    Content = "Script loaded successfully.\nMade by HB_HUB.\n\nKey: " .. VALID_KEY .. "\nAuto-dash interval adjustable."
+    Content = "Script loaded successfully.\nMade by HB_HUB.\n\nKey: " .. VALID_KEY .. "\nAuto-dash interval adjustable.\nPress F to toggle Auto-Dash in-game."
 })
 
--- Notify
 Fluent:Notify({
     Title = "🔔 Welcome",
     Content = "Enter your key to unlock the script.",
     Duration = 5
 })
 
--- SaveManager / InterfaceManager setup
+-- SaveManager / InterfaceManager
 SaveManager:LoadAutoloadConfig()
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
@@ -149,5 +132,5 @@ SaveManager:SetIgnoreIndexes({})
 InterfaceManager:SetFolder("FluentScriptHub")
 SaveManager:SetFolder("FluentScriptHub/specific-game")
 
-InterfaceManager:BuildInterfaceSection(Tabs.Info)  -- put settings in Info tab
+InterfaceManager:BuildInterfaceSection(Tabs.Info)
 SaveManager:BuildConfigSection(Tabs.Info)
