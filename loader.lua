@@ -1,5 +1,4 @@
 local plr = game:GetService("Players").LocalPlayer
-local uis = game:GetService("UserInputService")
 local stgui = game:GetService("StarterGui")
 
 if not getgenv().DisableNotification then
@@ -17,24 +16,10 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Load the global key and KeyIndex (original)
-scriptkey = game:HttpGet('https://pastefy.app/K3CkiCrr/raw')
-loadstring(game:HttpGet("https://pastefy.app/02uj0pdM/raw"))()
-
--- Load the whitelist from GitHub (NEW)
+-- Load whitelist from YOUR GitHub
 local Whitelist = loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/whitelist.lua"))()
 
--- Original function to get player's key type from KeyIndex
-local function getPlayerKeyType(userId)
-    for keyType, idList in pairs(KeyIndex) do
-        if table.find(idList, userId) then
-            return keyType:gsub(plr.Name.."_", "")
-        end
-    end
-    return nil
-end
-
--- NEW: Check if the player is whitelisted and key matches
+-- Whitelist check
 local function checkWhitelist(username, key)
     if Whitelist and Whitelist[username] then
         return Whitelist[username] == key
@@ -42,7 +27,7 @@ local function checkWhitelist(username, key)
     return false
 end
 
--- UI – same as before (only name changed)
+-- UI (claysPerk)
 local Window = Fluent:CreateWindow({
     Title = "claysPerk " .. Fluent.Version,
     SubTitle = "by HB_HUB",
@@ -84,44 +69,25 @@ Input:OnChanged(function()
     print("Input updated:", Input.Value)
 end)
 
--- The Check button – now checks whitelist FIRST, then global key, then KeyIndex
+-- Check button – only checks whitelist
 Tabs.Main:AddButton({
     Title = "Check",
     Callback = function()
-        local playerKeyType = getPlayerKeyType(plr.UserId)
-        
-        -- 1. Check whitelist (NEW)
         if checkWhitelist(plr.Name, scriptkeyInput) then
             loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
             Window:Destroy()
-            return
-        end
-        
-        -- 2. Check global key
-        if scriptkeyInput == scriptkey then
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
-            Window:Destroy()
-            return
-        end
-        
-        -- 3. Check KeyIndex (original per-user keys)
-        if playerKeyType and scriptkeyInput == playerKeyType then
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
-            Window:Destroy()
-            return
-        end
-        
-        -- If none match, show error
-        Window:Dialog({
-            Title = "Error",
-            Content = "The key is warned",
-            Buttons = {
-                {
-                    Title = "OK",
-                    Callback = function() end
+        else
+            Window:Dialog({
+                Title = "Error",
+                Content = "Wrong key or not whitelisted!",
+                Buttons = {
+                    {
+                        Title = "OK",
+                        Callback = function() end
+                    }
                 }
-            }
-        })
+            })
+        end
     end
 })
 
