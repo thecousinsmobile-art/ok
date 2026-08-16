@@ -1,9 +1,8 @@
--- Whitelist: add usernames and their personal keys here
--- Format: ["username"] = "key"
+-- Each user gets their own key
 return {
-    ["ClaysRetake"] = "okaydude123",
-    ["Friend1"] = "friend1key",
-    ["Friend2"] = "friend2key",
+    ["ClaysRetake"] = "claysretake",      -- your own key
+    ["Friend1"]    = "atlas123451",
+    ["Friend2"]    = "beta987654",
+    ["Another"]    = "randomkey789",
     -- Add more users below
-    -- ["AnotherUser"] = "anotherkey",
 }
