@@ -5,7 +5,7 @@ local stgui = game:GetService("StarterGui")
 if not getgenv().DisableNotification then
     stgui:SetCore("SendNotification", {
         Title = "[claysPerk]",
-        Icon = "rbxassetid://17280176207",  -- change this if you want
+        Icon = "rbxassetid://17280176207",
         Text = "claysPerk is loading, wait a second",
         Duration = 5,
         Button1 = "Dismiss",
@@ -17,13 +17,14 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Original global key from Pastefy
+-- Load the global key and KeyIndex (original)
 scriptkey = game:HttpGet('https://pastefy.app/K3CkiCrr/raw')
-
--- Original KeyIndex loader
 loadstring(game:HttpGet("https://pastefy.app/02uj0pdM/raw"))()
 
--- Original function to get user's personal key type
+-- Load the whitelist from GitHub (NEW)
+local Whitelist = loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/whitelist.lua"))()
+
+-- Original function to get player's key type from KeyIndex
 local function getPlayerKeyType(userId)
     for keyType, idList in pairs(KeyIndex) do
         if table.find(idList, userId) then
@@ -33,7 +34,15 @@ local function getPlayerKeyType(userId)
     return nil
 end
 
--- Original window creation (name changed to claysPerk)
+-- NEW: Check if the player is whitelisted and key matches
+local function checkWhitelist(username, key)
+    if Whitelist and Whitelist[username] then
+        return Whitelist[username] == key
+    end
+    return false
+end
+
+-- UI – same as before (only name changed)
 local Window = Fluent:CreateWindow({
     Title = "claysPerk " .. Fluent.Version,
     SubTitle = "by HB_HUB",
@@ -75,29 +84,44 @@ Input:OnChanged(function()
     print("Input updated:", Input.Value)
 end)
 
--- Original Check button (NO V key binding)
+-- The Check button – now checks whitelist FIRST, then global key, then KeyIndex
 Tabs.Main:AddButton({
     Title = "Check",
     Callback = function()
         local playerKeyType = getPlayerKeyType(plr.UserId)
+        
+        -- 1. Check whitelist (NEW)
+        if checkWhitelist(plr.Name, scriptkeyInput) then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
+            Window:Destroy()
+            return
+        end
+        
+        -- 2. Check global key
         if scriptkeyInput == scriptkey then
             loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
             Window:Destroy()
-        elseif playerKeyType and scriptkeyInput == playerKeyType then
+            return
+        end
+        
+        -- 3. Check KeyIndex (original per-user keys)
+        if playerKeyType and scriptkeyInput == playerKeyType then
             loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
             Window:Destroy()
-        else 
-            Window:Dialog({
-                Title = "Error",
-                Content = "The key is warned",
-                Buttons = {
-                    {
-                        Title = "OK",
-                        Callback = function() end
-                    }
-                }
-            })
+            return
         end
+        
+        -- If none match, show error
+        Window:Dialog({
+            Title = "Error",
+            Content = "The key is warned",
+            Buttons = {
+                {
+                    Title = "OK",
+                    Callback = function() end
+                }
+            }
+        })
     end
 })
 
