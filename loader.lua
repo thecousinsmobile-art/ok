@@ -17,9 +17,40 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 -- Load whitelist from GitHub
-local Whitelist = loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/whitelist.lua"))()
+local success, Whitelist = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/whitelist.lua"))()
+end)
 
--- Check if the user is in whitelist and the key matches
+if not success or not Whitelist then
+    stgui:SetCore("SendNotification", {
+        Title = "[ERROR]",
+        Text = "Could not load whitelist! Check your internet or the file URL.",
+        Duration = 10,
+        Button1 = "OK"
+    })
+    Whitelist = {}
+end
+
+-- Debug: show current username and if found in whitelist
+local username = plr.Name
+local foundKey = Whitelist[username]
+
+if foundKey then
+    stgui:SetCore("SendNotification", {
+        Title = "[DEBUG] Whitelist entry found",
+        Text = "Username: " .. username .. "\nExpected key: " .. foundKey,
+        Duration = 8,
+        Button1 = "OK"
+    })
+else
+    stgui:SetCore("SendNotification", {
+        Title = "[DEBUG] Not in whitelist",
+        Text = "Username: " .. username .. "\nNo matching entry in whitelist.",
+        Duration = 8,
+        Button1 = "OK"
+    })
+end
+
 local function checkWhitelist(username, key)
     if Whitelist and Whitelist[username] then
         return Whitelist[username] == key
@@ -27,7 +58,7 @@ local function checkWhitelist(username, key)
     return false
 end
 
--- UI (claysPerk)
+-- UI
 local Window = Fluent:CreateWindow({
     Title = "claysPerk " .. Fluent.Version,
     SubTitle = "by HB_HUB",
@@ -69,7 +100,6 @@ Input:OnChanged(function()
     print("Input updated:", Input.Value)
 end)
 
--- Check button – only checks whitelist
 Tabs.Main:AddButton({
     Title = "Check",
     Callback = function()
@@ -77,9 +107,11 @@ Tabs.Main:AddButton({
             loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
             Window:Destroy()
         else
+            -- Show detailed error
+            local expected = Whitelist[plr.Name] or "(none)"
             Window:Dialog({
                 Title = "Error",
-                Content = "Wrong key or not whitelisted!",
+                Content = "Wrong key or not whitelisted!\n\nYour username: " .. plr.Name .. "\nExpected key: " .. expected .. "\nYou entered: " .. scriptkeyInput,
                 Buttons = {
                     {
                         Title = "OK",
