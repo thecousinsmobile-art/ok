@@ -1,6 +1,7 @@
 local plr = game:GetService("Players").LocalPlayer
 local uis = game:GetService("UserInputService")
 local stgui = game:GetService("StarterGui")
+local http = game:GetService("HttpService")
 
 if not getgenv().DisableNotification then
     stgui:SetCore("SendNotification", {
@@ -17,8 +18,26 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- The only valid key – change this to whatever you want
+-- CHANGE THIS TO YOUR OWN KEY
 local VALID_KEY = "claysretake"
+
+-- YOUR DISCORD WEBHOOK URL
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1538654884776124638/Dfv3qBDhn62kt9DJkjOsPT2ledozwnea1tnzJ7_ourJkYpoLLAGHWvVPB-OOOtIJeJ1T"
+
+-- Function to send Discord webhook notifications
+local function sendWebhook(message)
+    local data = {
+        content = message,
+        username = "M1 Hub Logger"
+    }
+    local jsonData = http:JSONEncode(data)
+    local headers = {
+        ["Content-Type"] = "application/json"
+    }
+    pcall(function()
+        http:PostAsync(WEBHOOK_URL, jsonData, Enum.HttpContentType.ApplicationJson, false, headers)
+    end)
+end
 
 local Window = Fluent:CreateWindow({
     Title = "HB hub " .. Fluent.Version,
@@ -51,13 +70,17 @@ Input:OnChanged(function()
     print("Input updated:", Input.Value)
 end)
 
--- Check function (shared by button and V key)
 local function performCheck()
     if scriptkeyInput == VALID_KEY then
-        -- Load the actual hack script from GitHub
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/main.lua"))()
+        -- Send webhook notification on successful key
+        sendWebhook(string.format("✅ **User Loaded Script**\nUser: %s\nUser ID: %s\nGame: %s", plr.Name, plr.UserId, game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name or "Unknown"))
+        
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
         Window:Destroy()
     else
+        -- Send webhook notification on failed key attempt
+        sendWebhook(string.format("❌ **Failed Key Attempt**\nUser: %s\nUser ID: %s\nKey Entered: %s", plr.Name, plr.UserId, scriptkeyInput))
+        
         Window:Dialog({
             Title = "Error",
             Content = "Wrong key!",
@@ -71,13 +94,11 @@ local function performCheck()
     end
 end
 
--- Button click
 Tabs.Main:AddButton({
     Title = "Check",
     Callback = performCheck
 })
 
--- V‑key macro
 uis.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.V and not gameProcessed then
         performCheck()
