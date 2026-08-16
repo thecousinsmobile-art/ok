@@ -1,10 +1,11 @@
 local plr = game:GetService("Players").LocalPlayer
+local uis = game:GetService("UserInputService")
 local stgui = game:GetService("StarterGui")
 
 if not getgenv().DisableNotification then
     stgui:SetCore("SendNotification", {
         Title = "[claysPerk]",
-        Icon = "rbxassetid://17280176207",  -- change this to your own icon if you want
+        Icon = "rbxassetid://17280176207",  -- change this if you want
         Text = "claysPerk is loading, wait a second",
         Duration = 5,
         Button1 = "Dismiss",
@@ -16,38 +17,53 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- YOUR KEY – change this to whatever you want
-local VALID_KEY = "claysretake"
+-- Original global key from Pastefy
+scriptkey = game:HttpGet('https://pastefy.app/K3CkiCrr/raw')
 
--- Global toggle for auto-dash (will be used by main.lua)
-getgenv().AutoDashEnabled = false
+-- Original KeyIndex loader
+loadstring(game:HttpGet("https://pastefy.app/02uj0pdM/raw"))()
 
+-- Original function to get user's personal key type
+local function getPlayerKeyType(userId)
+    for keyType, idList in pairs(KeyIndex) do
+        if table.find(idList, userId) then
+            return keyType:gsub(plr.Name.."_", "")
+        end
+    end
+    return nil
+end
+
+-- Original window creation (name changed to claysPerk)
 local Window = Fluent:CreateWindow({
-    Title = "⚡ claysPerk",
+    Title = "claysPerk " .. Fluent.Version,
     SubTitle = "by HB_HUB",
-    TabWidth = 180,
-    Size = UDim2.fromOffset(500, 250),
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 250),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
-    Key = Window:AddTab({ Title = "🔑 Key", Icon = "key" }),
-    Info = Window:AddTab({ Title = "ℹ️ Info", Icon = "info" })
+    Main = Window:AddTab({ Title = "Key System", Icon = "key" }),
 }
 
-local scriptkeyInput = ""
+local Options = Fluent.Options
 
--- ============================
--- KEY TAB
--- ============================
-local keySection = Tabs.Key:AddSection("Enter Your Key")
+Fluent:Notify({
+    Title = "Notification",
+    Content = "This is a notification",
+    SubContent = "SubContent",
+    Duration = 5
+})
 
-local Input = keySection:AddInput("Input", {
+Window:SelectTab(1)
+scriptkeyInput = "string"
+
+local Input = Tabs.Main:AddInput("Input", {
     Title = "Key",
     Default = "",
-    Placeholder = "Enter the key",
+    Placeholder = "key",
     Numeric = false,
     Finished = false,
     Callback = function(Value)
@@ -55,45 +71,42 @@ local Input = keySection:AddInput("Input", {
     end
 })
 
-local function performCheck()
-    if scriptkeyInput == VALID_KEY then
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
-        Window:Destroy()
-    else
-        Window:Dialog({
-            Title = "❌ Error",
-            Content = "Wrong key! Please try again.",
-            Buttons = {
-                {
-                    Title = "OK",
-                    Callback = function() end
+Input:OnChanged(function()
+    print("Input updated:", Input.Value)
+end)
+
+-- Original Check button (NO V key binding)
+Tabs.Main:AddButton({
+    Title = "Check",
+    Callback = function()
+        local playerKeyType = getPlayerKeyType(plr.UserId)
+        if scriptkeyInput == scriptkey then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
+            Window:Destroy()
+        elseif playerKeyType and scriptkeyInput == playerKeyType then
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
+            Window:Destroy()
+        else 
+            Window:Dialog({
+                Title = "Error",
+                Content = "The key is warned",
+                Buttons = {
+                    {
+                        Title = "OK",
+                        Callback = function() end
+                    }
                 }
-            }
-        })
+            })
+        end
     end
-end
-
-keySection:AddButton({
-    Title = "✅ Verify Key",
-    Callback = performCheck
-})
-
--- ============================
--- INFO TAB
--- ============================
-local infoSection = Tabs.Info:AddSection("About claysPerk")
-infoSection:AddParagraph({
-    Title = "M1 Dash Reset",
-    Content = "Press V to toggle auto‑dash on/off.\n\nKey: " .. VALID_KEY .. "\n\nMade for M1 reset."
 })
 
 Fluent:Notify({
-    Title = "🔔 Welcome",
-    Content = "Enter your key to unlock.",
-    Duration = 5
+    Title = "Fluent",
+    Content = "The script has been loaded.",
+    Duration = 8
 })
 
--- SaveManager / InterfaceManager (optional, but keep for settings)
 SaveManager:LoadAutoloadConfig()
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
@@ -104,5 +117,5 @@ SaveManager:SetIgnoreIndexes({})
 InterfaceManager:SetFolder("FluentScriptHub")
 SaveManager:SetFolder("FluentScriptHub/specific-game")
 
-InterfaceManager:BuildInterfaceSection(Tabs.Info)   -- put settings in Info tab
-SaveManager:BuildConfigSection(Tabs.Info)
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
