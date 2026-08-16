@@ -2,9 +2,8 @@ local plr = game:GetService("Players").LocalPlayer
 local uis = game:GetService("UserInputService")
 local stgui = game:GetService("StarterGui")
 
--- Load settings from the loader (fallback to defaults)
+-- Load toggle from loader (default: false)
 getgenv().AutoDashEnabled = getgenv().AutoDashEnabled or false
-getgenv().DashInterval = getgenv().DashInterval or 500
 
 -- === DASH FUNCTIONS ===
 
@@ -68,26 +67,24 @@ local function emoteDash()
     end
 end
 
--- === MANUAL Q DASH ===
+-- === MANUAL Q DASH (kept original behaviour) ===
 uis.InputBegan:Connect(function(input, t)
     if t then return end
     if input.KeyCode == Enum.KeyCode.Q then
         local char = plr.Character
         if not char then return end
 
-        -- Front dash (original M1 reset)
         if char:FindFirstChild("UsedDash") and not uis:IsKeyDown(Enum.KeyCode.D) and not uis:IsKeyDown(Enum.KeyCode.A) and not uis:IsKeyDown(Enum.KeyCode.S) then
             frontDash()
         end
 
-        -- Emote dash cancel
         if not uis:IsKeyDown(Enum.KeyCode.W) and not uis:IsKeyDown(Enum.KeyCode.S) then
             emoteDash()
         end
     end
 end)
 
--- === AUTO‑DASH LOOP (BUILT‑IN MACRO) ===
+-- === AUTO‑DASH LOOP (runs every 500ms) ===
 coroutine.wrap(function()
     while true do
         if getgenv().AutoDashEnabled then
@@ -97,31 +94,30 @@ coroutine.wrap(function()
                 emoteDash()
             end
         end
-        local interval = getgenv().DashInterval or 500
-        task.wait(interval / 1000) -- convert ms to seconds
+        task.wait(0.5) -- fixed 500ms interval (you can adjust here if needed)
     end
 end)()
 
--- === PRESS F TO TOGGLE AUTO‑DASH (IN‑GAME) ===
+-- === PRESS V TO TOGGLE AUTO‑DASH ===
 uis.InputBegan:Connect(function(input, t)
     if t then return end
-    if input.KeyCode == Enum.KeyCode.F then
+    if input.KeyCode == Enum.KeyCode.V then
         getgenv().AutoDashEnabled = not getgenv().AutoDashEnabled
         stgui:SetCore("SendNotification", {
-            Title = "Auto-Dash",
-            Text = getgenv().AutoDashEnabled and "✅ Enabled" : "❌ Disabled",
+            Title = "claysPerk",
+            Text = getgenv().AutoDashEnabled and "✅ Auto‑dash ON" : "❌ Auto‑dash OFF",
             Duration = 2,
             Button1 = "OK"
         })
     end
 end)
 
--- === LOADED NOTIFICATION ===
+-- === NOTIFICATION WHEN SCRIPT LOADS ===
 if not getgenv().DisableNotification then
     stgui:SetCore("SendNotification", {
-        Title = "[M1 reset loaded]",
+        Title = "[claysPerk loaded]",
         Icon = "rbxassetid://17280176207",
-        Text = "Press Q to dash | Press F to toggle auto-dash",
+        Text = "Press V to toggle auto‑dash | Q for manual dash",
         Duration = 5,
         Button1 = "Dismiss"
     })
