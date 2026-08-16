@@ -2,7 +2,7 @@ local plr = game:GetService("Players").LocalPlayer
 local uis = game:GetService("UserInputService")
 local stgui = game:GetService("StarterGui")
 
--- === ORIGINAL FUNCTIONS (unchanged) ===
+-- === ORIGINAL FUNCTIONS (EXACTLY AS YOU HAD) ===
 
 local frontDashArgs = {
 	[1] = {
@@ -70,6 +70,7 @@ local function emoteDashSetup(char)
 	end)
 end
 
+-- Attach to character
 if plr.Character then
 	noEndlagSetup(plr.Character)
 	emoteDashSetup(plr.Character)
@@ -78,13 +79,15 @@ end
 plr.CharacterAdded:Connect(emoteDashSetup)
 plr.CharacterAdded:Connect(noEndlagSetup)
 
--- === V key performs a single M1 dash reset ===
+-- === ADDED: V KEY = MACRO DASH RESET (SAME AS EXTERNAL MACRO) ===
 uis.InputBegan:Connect(function(input, t)
     if t then return end
     if input.KeyCode == Enum.KeyCode.V then
         local char = plr.Character
         if char and char:FindFirstChild("UsedDash") then
+            -- Front dash
             frontDash()
+            -- Emote dash cancel (side dash)
             local hrp = char:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local vel = hrp:FindFirstChild("dodgevelocity")
@@ -102,7 +105,7 @@ if not getgenv().DisableNotification then
 	stgui:SetCore("SendNotification", {
 		Title = "[claysPerk loaded]",
 		Icon = "rbxassetid://17280176207",
-		Text = "Q = manual dash | V = dash reset macro",
+		Text = "Q = manual dash | V = macro dash reset",
 		Duration = 5,
 		Button1 = "Dismiss",
 		Callback = function() end
