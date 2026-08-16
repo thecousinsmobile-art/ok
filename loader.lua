@@ -1,7 +1,5 @@
 local plr = game:GetService("Players").LocalPlayer
-local uis = game:GetService("UserInputService")
 local stgui = game:GetService("StarterGui")
-local http = game:GetService("HttpService")
 
 if not getgenv().DisableNotification then
     stgui:SetCore("SendNotification", {
@@ -21,41 +19,32 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 -- CHANGE THIS TO YOUR OWN KEY
 local VALID_KEY = "claysretake"
 
--- YOUR DISCORD WEBHOOK URL
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1538654884776124638/Dfv3qBDhn62kt9DJkjOsPT2ledozwnea1tnzJ7_ourJkYpoLLAGHWvVPB-OOOtIJeJ1T"
-
--- Function to send Discord webhook notifications
-local function sendWebhook(message)
-    local data = {
-        content = message,
-        username = "M1 Hub Logger"
-    }
-    local jsonData = http:JSONEncode(data)
-    local headers = {
-        ["Content-Type"] = "application/json"
-    }
-    pcall(function()
-        http:PostAsync(WEBHOOK_URL, jsonData, Enum.HttpContentType.ApplicationJson, false, headers)
-    end)
-end
-
+-- Create the main window with a sleek dark theme
 local Window = Fluent:CreateWindow({
-    Title = "HB hub " .. Fluent.Version,
+    Title = "⚡ M1 Hub",
     SubTitle = "by HB_HUB",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(580, 250),
+    TabWidth = 180,
+    Size = UDim2.fromOffset(600, 350),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
+-- Tabs
 local Tabs = {
-    Main = Window:AddTab({ Title = "Key System", Icon = "key" }),
+    Key = Window:AddTab({ Title = "🔑 Key", Icon = "key" }),
+    Dash = Window:AddTab({ Title = "💨 Dash", Icon = "dash" }),
+    Info = Window:AddTab({ Title = "ℹ️ Info", Icon = "info" })
 }
 
 local scriptkeyInput = ""
 
-local Input = Tabs.Main:AddInput("Input", {
+-- ============================
+-- KEY TAB
+-- ============================
+local keySection = Tabs.Key:AddSection("Enter Your Key")
+
+local Input = keySection:AddInput("Input", {
     Title = "Key",
     Default = "",
     Placeholder = "Enter the key",
@@ -72,18 +61,13 @@ end)
 
 local function performCheck()
     if scriptkeyInput == VALID_KEY then
-        -- Send webhook notification on successful key
-        sendWebhook(string.format("✅ **User Loaded Script**\nUser: %s\nUser ID: %s\nGame: %s", plr.Name, plr.UserId, game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name or "Unknown"))
-        
+        -- Load the main script from your GitHub
         loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"))()
         Window:Destroy()
     else
-        -- Send webhook notification on failed key attempt
-        sendWebhook(string.format("❌ **Failed Key Attempt**\nUser: %s\nUser ID: %s\nKey Entered: %s", plr.Name, plr.UserId, scriptkeyInput))
-        
         Window:Dialog({
-            Title = "Error",
-            Content = "Wrong key!",
+            Title = "❌ Error",
+            Content = "Wrong key! Please try again.",
             Buttons = {
                 {
                     Title = "OK",
@@ -94,23 +78,67 @@ local function performCheck()
     end
 end
 
-Tabs.Main:AddButton({
-    Title = "Check",
+keySection:AddButton({
+    Title = "✅ Verify Key",
     Callback = performCheck
 })
 
-uis.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.V and not gameProcessed then
-        performCheck()
-    end
-end)
+-- ============================
+-- DASH TAB (Settings for the macro)
+-- ============================
+local dashSection = Tabs.Dash:AddSection("Dash Configuration")
 
-Fluent:Notify({
-    Title = "Fluent",
-    Content = "The script has been loaded.",
-    Duration = 8
+-- Toggle to enable auto-dash
+local autoDashToggle = dashSection:AddToggle("AutoDash", {
+    Title = "Auto Dash",
+    Description = "Automatically performs M1 dash reset",
+    Default = false,
+    Callback = function(Value)
+        getgenv().AutoDashEnabled = Value
+    end
 })
 
+-- Slider for dash interval (in milliseconds)
+local dashInterval = dashSection:AddSlider("DashInterval", {
+    Title = "Dash Interval (ms)",
+    Description = "Delay between each dash",
+    Default = 500,
+    Min = 100,
+    Max = 2000,
+    Rounding = 1,
+    Callback = function(Value)
+        getgenv().DashInterval = Value
+    end
+})
+
+-- Add a keybind to toggle auto-dash with a key (optional)
+local dashToggleKey = dashSection:AddKeybind("DashToggleKey", {
+    Title = "Toggle Auto-Dash Key",
+    Default = Enum.KeyCode.F,
+    Callback = function(Key, Mode)
+        if Mode == Enum.KeyCode.F then
+            autoDashToggle:SetValue(not autoDashToggle.Value)
+        end
+    end
+})
+
+-- ============================
+-- INFO TAB
+-- ============================
+local infoSection = Tabs.Info:AddSection("About")
+infoSection:AddParagraph({
+    Title = "M1 Reset Hub",
+    Content = "Script loaded successfully.\nMade by HB_HUB.\n\nKey: " .. VALID_KEY .. "\nAuto-dash interval adjustable."
+})
+
+-- Notify
+Fluent:Notify({
+    Title = "🔔 Welcome",
+    Content = "Enter your key to unlock the script.",
+    Duration = 5
+})
+
+-- SaveManager / InterfaceManager setup
 SaveManager:LoadAutoloadConfig()
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
@@ -121,5 +149,5 @@ SaveManager:SetIgnoreIndexes({})
 InterfaceManager:SetFolder("FluentScriptHub")
 SaveManager:SetFolder("FluentScriptHub/specific-game")
 
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
+InterfaceManager:BuildInterfaceSection(Tabs.Info)  -- put settings in Info tab
+SaveManager:BuildConfigSection(Tabs.Info)
