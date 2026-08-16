@@ -49,9 +49,7 @@ local function isAnimationRunning(char, animationId)
             for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
                 if track.Animation and track.Animation.AnimationId == "rbxassetid://" .. tostring(animationId) then
 					return true
-				else
-					return false
-                end
+				end
             end
         end
     end
@@ -83,39 +81,27 @@ plr.CharacterAdded:Connect(emoteDashSetup)
 plr.CharacterAdded:Connect(noEndlagSetup)
 
 -- ===============================
--- NEW: Macro function (exactly what an external macro would do)
+-- V BIND – ONLY EMOTE DASH CANCEL
+-- (stops side dash animations without front dash)
 -- ===============================
-local function performDashReset()
+local function emoteDashOnly()
     local char = plr.Character
     if not char then return end
-
-    -- 1. Front dash (same conditions as Q: must have UsedDash and not holding D/A/S)
-    if char:FindFirstChild("UsedDash") and not uis:IsKeyDown(Enum.KeyCode.D) and not uis:IsKeyDown(Enum.KeyCode.A) and not uis:IsKeyDown(Enum.KeyCode.S) then
-        frontDash()
-    end
-
-    -- 2. Emote dash cancel (same conditions as the original emote dash)
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if hrp then
-        -- Only if not holding W/S and not playing backdash animation (10491993682)
-        if not uis:IsKeyDown(Enum.KeyCode.W) and not uis:IsKeyDown(Enum.KeyCode.S) and not isAnimationRunning(char, 10491993682) then
-            local vel = hrp:FindFirstChild("dodgevelocity")
-            if vel then
-                vel:Destroy()
-                stopAnimation(char, 10480793962) -- right dash
-                stopAnimation(char, 10480796021) -- left dash
-            end
+        local vel = hrp:FindFirstChild("dodgevelocity")
+        if vel then
+            vel:Destroy()
+            stopAnimation(char, 10480793962) -- right dash
+            stopAnimation(char, 10480796021) -- left dash
         end
     end
 end
 
--- ===============================
--- Bind V to run the macro once per press
--- ===============================
 uis.InputBegan:Connect(function(input, t)
     if t then return end
     if input.KeyCode == Enum.KeyCode.V then
-        performDashReset()
+        emoteDashOnly()
     end
 end)
 
@@ -126,7 +112,7 @@ if not getgenv().DisableNotification then
 	stgui:SetCore("SendNotification", {
 		Title = "[claysPerk loaded]",
 		Icon = "rbxassetid://17280176207",
-		Text = "Q = manual dash | V = macro dash reset",
+		Text = "Q = dash reset | V = emote cancel only",
 		Duration = 5,
 		Button1 = "Dismiss",
 		Callback = function() end
