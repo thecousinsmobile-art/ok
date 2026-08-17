@@ -1,6 +1,6 @@
 --[[
     M1 Reset + Emote Dash – Main Script
-    Generated at discord.gg/25ms
+    Keybinds: R = M1 Reset, V = Emote Dash (no spin)
 ]]
 
 local vu1 = game:GetService("Players").LocalPlayer
@@ -28,7 +28,7 @@ if not vu6 then
 end
 local vu9 = {
     M1_RESET = Enum.KeyCode.R,
-    EMOTE_DASH = Enum.KeyCode.T
+    EMOTE_DASH = Enum.KeyCode.V  -- Changed from T to V
 }
 getgenv().connections = getgenv().connections or {}
 if type(getgenv().connections) == "table" then
@@ -310,18 +310,19 @@ local function vu91()
         end
     end)
 end
+
+-- Emote Dash – no spin, only dash and animation
 local function vu92()
     vu59()
     pcall(function()
         vu66(10480793962)
     end)
-    pcall(function()
-        vu75(90)
-    end)
+    -- Removed the vu75(90) spin
     pcall(function()
         vu90(1, 38, 8, 95, 0.27)
     end)
 end
+
 if vu6 then
     local _ = type(vu6.SendKeyEvent) == "function"
 end
@@ -406,7 +407,7 @@ v110.TextColor3 = vu33.Text
 v110.Font = Enum.Font.GothamBold
 v110.TextSize = 20
 v110.TextWrapped = true
-v110.Text = "M1 Reset by dovi!\nKeybinds: R = M1 Reset | T = Emote Dash"
+v110.Text = "M1 Reset by dovi!\nKeybinds: R = M1 Reset | V = Emote Dash"
 pcall(function()
     vu3:Create(vu109, TweenInfo.new(0.5, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {
         Position = UDim2.new(0.5, - 150, 0.1, 0)
@@ -705,12 +706,10 @@ local v159 = vu2.InputBegan:Connect(function(p157, p158)
     elseif vu2:GetFocusedTextBox() then
         return
     elseif p157.UserInputType == Enum.UserInputType.Keyboard then
-        if p157.KeyCode ~= vu9.M1_RESET then
-            if p157.KeyCode == vu9.EMOTE_DASH then
-                pcall(vu92)
-            end
-        else
+        if p157.KeyCode == vu9.M1_RESET then
             pcall(vu91)
+        elseif p157.KeyCode == vu9.EMOTE_DASH then
+            pcall(vu92)
         end
     end
 end)
