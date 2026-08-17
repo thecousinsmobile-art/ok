@@ -8,7 +8,8 @@ local LocalPlayer = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 
 -- ========== CONFIGURATION ==========
-local SCRIPT_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/m1reset_main.lua"  -- CHANGE THIS
+-- This is the raw URL of your main.lua on GitHub
+local SCRIPT_URL = "https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"
 
 -- ========== FRIEND LIST ==========
 -- Add your friends here. Each entry:
