@@ -17,7 +17,7 @@ local SCRIPT_URL = "https://raw.githubusercontent.com/thecousinsmobile-art/ok/ma
 --   password : the password you give them (case-sensitive)
 --   duration : "1h" = 1 hour, "1d" = 1 day, "lifetime" = never expires
 local friends = {
-    {username = "Friend1", password = "pass123",   duration = "1h"},
+    {username = "ClaysRetake", password = "pass123",   duration = "lifetime"},
     {username = "Friend2", password = "secure456", duration = "1d"},
     {username = "Friend3", password = "lifetime789", duration = "lifetime"},
     -- Add more friends below...
