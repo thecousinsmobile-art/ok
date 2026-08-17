@@ -8,8 +8,8 @@
 local Keys = {
     -- ["your-key-string"] = { username = "RobloxUsername", duration = "1h" }
     -- duration can be "lifetime", "1h", "1d", "30m", etc.
-    ["ABC-123"] = {
-        username = "YourRobloxUsername",
+    ["123"] = {
+        username = "ClaysRetake",
         duration = "lifetime",
     },
     ["XYZ-789"] = {
