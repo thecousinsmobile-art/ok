@@ -25,7 +25,7 @@ return {
     -- },
 
     ["ClaysRetake"] = {
-        Key = "CHANGE-ME",
+        Key = "YO",
         Duration = "lifetime",
     },
 
