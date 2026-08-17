@@ -1,121 +1,189 @@
--- Whitelist Server Script
--- Handles key generation, validation, and expiration
+--[[
+    M1 Reset Loader – Friend Whitelist with Durations
+    Users enter their password; the script checks username, password, and expiry.
+]]
 
-local DataStoreService = game:GetService("DataStoreService")
-local keyStore = DataStoreService:GetDataStore("WhitelistKeys")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
 
-local REMOTE_EVENT_NAME = "KeyValidationRemote"
-local remoteEvent = Instance.new("RemoteEvent")
-remoteEvent.Name = REMOTE_EVENT_NAME
-remoteEvent.Parent = game:GetService("ReplicatedStorage")
+-- ========== CONFIGURATION ==========
+local SCRIPT_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/m1reset_main.lua"  -- CHANGE THIS
 
--- Admin commands (use in chat with prefix "/")
-local ADMIN_USER_ID = 123456789 -- Replace with your Roblox User ID
-local ALLOWED_USERS = {ADMIN_USER_ID} -- Add more admins if needed
+-- ========== FRIEND LIST ==========
+-- Add your friends here. Each entry:
+--   username : their exact Roblox username (case-sensitive)
+--   password : the password you give them (case-sensitive)
+--   duration : "1h" = 1 hour, "1d" = 1 day, "lifetime" = never expires
+local friends = {
+    {username = "Friend1", password = "pass123",   duration = "1h"},
+    {username = "Friend2", password = "secure456", duration = "1d"},
+    {username = "Friend3", password = "lifetime789", duration = "lifetime"},
+    -- Add more friends below...
+}
+-- ====================================
 
--- Helper: parse duration string
-local function parseDuration(str)
-	if str:lower() == "lifetime" then
-		return math.huge
-	end
-	local num = tonumber(str)
-	if num then
-		if str:find("h") then return num * 3600 end
-		if str:find("d") then return num * 86400 end
-		if str:find("m") then return num * 60 end
-		return num -- assume seconds
-	end
-	return nil
+-- Helper: get expiry timestamp from duration string
+local function getExpiry(duration)
+    if duration == "1h" then
+        return os.time() + 3600
+    elseif duration == "1d" then
+        return os.time() + 86400
+    elseif duration == "lifetime" then
+        return os.time() + 315360000  -- ≈10 years
+    else
+        return 0  -- invalid, will expire immediately
+    end
 end
 
--- Generate a random key (6 alphanumeric characters)
-local function generateKey()
-	local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	local key = ""
-	for i = 1, 6 do
-		key = key .. chars:sub(math.random(1, #chars), math.random(1, #chars))
-	end
-	return key
+-- Validate a password against the friend list
+local function validatePassword(password)
+    if type(password) ~= "string" or #password == 0 then return false end
+    for _, friend in ipairs(friends) do
+        if friend.password == password then
+            -- Check username match
+            if friend.username == LocalPlayer.Name then
+                -- Compute expiry and check
+                local expiry = getExpiry(friend.duration)
+                if expiry > os.time() then
+                    return true
+                else
+                    return false, "expired"
+                end
+            else
+                return false, "wrong user"
+            end
+        end
+    end
+    return false, "not found"
 end
 
--- Add a key for a username
-local function addKeyForUser(username, durationStr)
-	local duration = parseDuration(durationStr)
-	if not duration then return false, "Invalid duration. Use e.g. 1h, 2d, lifetime." end
-	
-	local key = generateKey()
-	local expiry = duration == math.huge and math.huge or os.time() + duration
-	
-	-- Store in DataStore (keyed by username)
-	local success, err = pcall(function()
-		keyStore:SetAsync(username, {key = key, expiry = expiry})
-	end)
-	if not success then
-		return false, "Failed to save key: " .. tostring(err)
-	end
-	return true, key
-end
+-- ========== PASSWORD INPUT GUI ==========
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PasswordEntry"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
--- Validate a key for a username
-local function validateKey(username, inputKey)
-	local data = keyStore:GetAsync(username)
-	if not data then return false, "No key found for this username." end
-	if data.key ~= inputKey then return false, "Invalid key." end
-	if data.expiry ~= math.huge and data.expiry < os.time() then
-		return false, "Key has expired."
-	end
-	return true, "Valid key."
-end
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 120)
+mainFrame.Position = UDim2.new(0.5, -150, 0.4, -60)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BackgroundTransparency = 0.2
+mainFrame.Parent = screenGui
 
--- Remote event handler
-remoteEvent.OnServerEvent:Connect(function(player, action, ...)
-	local args = {...}
-	
-	if action == "validate" then
-		local username = args[1]
-		local key = args[2]
-		local success, msg = validateKey(username, key)
-		remoteEvent:FireClient(player, "validateResult", success, msg)
-	
-	elseif action == "addKey" then
-		-- Only admins can add keys
-		if not table.find(ALLOWED_USERS, player.UserId) then
-			remoteEvent:FireClient(player, "addKeyResult", false, "You are not authorized.")
-			return
-		end
-		local targetUsername = args[1]
-		local duration = args[2]
-		local success, result = addKeyForUser(targetUsername, duration)
-		if success then
-			remoteEvent:FireClient(player, "addKeyResult", true, "Key generated: " .. result .. " for " .. targetUsername)
-		else
-			remoteEvent:FireClient(player, "addKeyResult", false, result)
-		end
-	end
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = mainFrame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(200, 200, 200)
+stroke.Thickness = 1
+stroke.Transparency = 0.5
+stroke.Parent = mainFrame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Position = UDim2.new(0, 0, 0, 10)
+title.BackgroundTransparency = 1
+title.Text = "Enter Your Password"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextXAlignment = Enum.TextXAlignment.Center
+title.Parent = mainFrame
+
+local passBox = Instance.new("TextBox")
+passBox.Size = UDim2.new(1, -20, 0, 30)
+passBox.Position = UDim2.new(0, 10, 0.5, -15)
+passBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+passBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+passBox.Font = Enum.Font.Gotham
+passBox.TextSize = 14
+passBox.PlaceholderText = "Password"
+passBox.Parent = mainFrame
+local boxCorner = Instance.new("UICorner")
+boxCorner.CornerRadius = UDim.new(0, 8)
+boxCorner.Parent = passBox
+
+local submitBtn = Instance.new("TextButton")
+submitBtn.Size = UDim2.new(0, 100, 0, 30)
+submitBtn.Position = UDim2.new(0.5, -50, 1, -45)
+submitBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+submitBtn.Font = Enum.Font.GothamBold
+submitBtn.TextSize = 16
+submitBtn.Text = "Submit"
+submitBtn.Parent = mainFrame
+local submitCorner = Instance.new("UICorner")
+submitCorner.CornerRadius = UDim.new(0, 8)
+submitCorner.Parent = submitBtn
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 20)
+statusLabel.Position = UDim2.new(0, 0, 1, -75)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = ""
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 13
+statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+statusLabel.Parent = mainFrame
+
+-- Parent the GUI
+local function parentGUI()
+    local playerGui = LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui")
+    if playerGui then
+        screenGui.Parent = playerGui
+        return true
+    end
+    local gui = game:GetService("CoreGui") or game:GetService("StarterGui")
+    pcall(function() screenGui.Parent = gui end)
+    return screenGui.Parent ~= nil
+end
+parentGUI()
+
+submitBtn.MouseButton1Click:Connect(function()
+    local password = passBox.Text
+    if #password == 0 then
+        statusLabel.Text = "Please enter your password."
+        return
+    end
+    local valid, reason = validatePassword(password)
+    if valid then
+        statusLabel.Text = "✅ Valid – loading script..."
+        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        task.wait(0.5)
+        screenGui:Destroy()
+
+        -- Load main script from GitHub
+        local success, result = pcall(function()
+            return game:HttpGet(SCRIPT_URL)
+        end)
+        if success and result then
+            local func, err = loadstring(result)
+            if func then
+                func()
+            else
+                warn("Failed to compile main script: " .. tostring(err))
+            end
+        else
+            warn("Failed to fetch main script: " .. tostring(result))
+        end
+    else
+        if reason == "expired" then
+            statusLabel.Text = "❌ This password has expired."
+        elseif reason == "wrong user" then
+            statusLabel.Text = "❌ Password not meant for this user."
+        else
+            statusLabel.Text = "❌ Invalid password."
+        end
+        statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    end
 end)
 
--- Admin chat command handler
-game:GetService("Players").PlayerAdded:Connect(function(player)
-	player.Chatted:Connect(function(msg)
-		if not table.find(ALLOWED_USERS, player.UserId) then return end
-		
-		local parts = {}
-		for word in string.gmatch(msg, "%S+") do
-			table.insert(parts, word)
-		end
-		if #parts < 3 then return end
-		
-		if parts[1] == "/addkey" then
-			local username = parts[2]
-			local duration = parts[3]
-			local success, result = addKeyForUser(username, duration)
-			if success then
-				player:Chat("Key for " .. username .. ": " .. result .. " (duration: " .. duration .. ")")
-			else
-				player:Chat("Error: " .. result)
-			end
-		end
-	end)
+passBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        submitBtn.MouseButton1Click:Fire()
+    end
 end)
-
-print("Whitelist server script loaded.")
