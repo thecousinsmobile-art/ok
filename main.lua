@@ -1,6 +1,6 @@
 --[[
     M1 Reset + Emote Dash – Main Script
-    Keybinds: R = M1 Reset, V = Emote Dash (dash only, no spin)
+    Keybinds: R = M1 Reset, V = Emote Dash (with animation, no spin)
 ]]
 
 local vu1 = game:GetService("Players").LocalPlayer
@@ -294,7 +294,7 @@ end
 local function vu91()
     vu59()
     pcall(function()
-        vu66(10480793962)
+        vu66(10480793962)  -- Animation for M1 Reset (spins, but that's intended)
     end)
     pcall(function()
         vu81(1, 26, 0.22)
@@ -311,12 +311,14 @@ local function vu91()
     end)
 end
 
--- Emote Dash – ONLY dash, NO animation, NO spin
+-- Emote Dash – uses a different animation (wave) that does NOT spin
 local function vu92()
-    vu59()  -- stop any existing animations
-    -- No animation (vu66) – to avoid any rotation
+    vu59()  -- stop current animations
     pcall(function()
-        vu90(1, 38, 8, 95, 0.27)  -- dash only
+        vu66(10586968306)  -- Wave animation – no root rotation
+    end)
+    pcall(function()
+        vu90(1, 38, 8, 95, 0.27)  -- dash forward
     end)
 end
 
