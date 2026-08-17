@@ -63,7 +63,7 @@ return {
         -- ==========================
         -- LIFETIME KEYS (5 Users)
         -- ==========================
-        ["LIFETIME_KEY_USER1"] = {
+        ["123"] = {
             owner = "ClaysRetake",
             type = "lifetime"
         },
