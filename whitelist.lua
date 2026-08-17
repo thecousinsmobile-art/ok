@@ -1,190 +1,210 @@
---[[
-    M1 Reset Loader – Friend Whitelist with Durations
-    Users enter their password; the script checks username, password, and expiry.
-]]
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
-
--- ========== CONFIGURATION ==========
--- This is the raw URL of your main.lua on GitHub
-local SCRIPT_URL = "https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/main.lua"
-
--- ========== FRIEND LIST ==========
--- Add your friends here. Each entry:
---   username : their exact Roblox username (case-sensitive)
---   password : the password you give them (case-sensitive)
---   duration : "1h" = 1 hour, "1d" = 1 day, "lifetime" = never expires
-local friends = {
-    {username = "ClaysRetake", password = "pass123",   duration = "lifetime"},
-    {username = "Friend2", password = "secure456", duration = "1d"},
-    {username = "Friend3", password = "lifetime789", duration = "lifetime"},
-    -- Add more friends below...
+-- ===================================================
+--  WHITELIST CHECKER – Edit the table below
+-- ===================================================
+local Whitelist = {
+     ["ClaysRetake"] = "Lifetime"   (e.g., "1h", "2h", "1d", "lifetime")
+    -- Example:
+    -- ["Player1"] = "lifetime",
+    -- ["Player2"] = "1h",
+    -- ["Player3"] = "1d",
 }
--- ====================================
 
--- Helper: get expiry timestamp from duration string
-local function getExpiry(duration)
-    if duration == "1h" then
-        return os.time() + 3600
-    elseif duration == "1d" then
-        return os.time() + 86400
-    elseif duration == "lifetime" then
-        return os.time() + 315360000  -- ≈10 years
-    else
-        return 0  -- invalid, will expire immediately
+-- Helper: parse duration string into seconds
+local function parseDuration(durationStr)
+    if durationStr == "lifetime" then
+        return math.huge
     end
+    local num = tonumber(durationStr:match("%d+"))
+    local unit = durationStr:match("[a-zA-Z]+")
+    if not num or not unit then return nil end
+    unit = unit:lower()
+    if unit == "s" then return num
+    elseif unit == "m" then return num * 60
+    elseif unit == "h" then return num * 3600
+    elseif unit == "d" then return num * 86400
+    else return nil end
 end
 
--- Validate a password against the friend list
-local function validatePassword(password)
-    if type(password) ~= "string" or #password == 0 then return false end
-    for _, friend in ipairs(friends) do
-        if friend.password == password then
-            -- Check username match
-            if friend.username == LocalPlayer.Name then
-                -- Compute expiry and check
-                local expiry = getExpiry(friend.duration)
-                if expiry > os.time() then
-                    return true
-                else
-                    return false, "expired"
-                end
-            else
-                return false, "wrong user"
-            end
-        end
+-- Check if player is whitelisted and not expired
+local function isPlayerWhitelisted(playerName)
+    local duration = Whitelist[playerName]
+    if not duration then return false end
+    local seconds = parseDuration(duration)
+    if seconds == nil then
+        warn("Invalid duration for " .. playerName .. ": " .. duration)
+        return false
     end
-    return false, "not found"
+    if seconds == math.huge then
+        return true  -- lifetime
+    end
+    -- Store start time per player (session‑based; resets on server restart)
+    if not isPlayerWhitelisted._startTimes then
+        isPlayerWhitelisted._startTimes = {}
+    end
+    local startTime = isPlayerWhitelisted._startTimes[playerName]
+    if not startTime then
+        startTime = os.time()
+        isPlayerWhitelisted._startTimes[playerName] = startTime
+    end
+    return (os.time() - startTime) < seconds
 end
 
--- ========== PASSWORD INPUT GUI ==========
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PasswordEntry"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+-- ================== CHECK AND LOAD MAIN SCRIPT ==================
+local player = game.Players.LocalPlayer
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 120)
-mainFrame.Position = UDim2.new(0.5, -150, 0.4, -60)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BackgroundTransparency = 0.2
-mainFrame.Parent = screenGui
-
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = mainFrame
-
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(200, 200, 200)
-stroke.Thickness = 1
-stroke.Transparency = 0.5
-stroke.Parent = mainFrame
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.Position = UDim2.new(0, 0, 0, 10)
-title.BackgroundTransparency = 1
-title.Text = "Enter Your Password"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextXAlignment = Enum.TextXAlignment.Center
-title.Parent = mainFrame
-
-local passBox = Instance.new("TextBox")
-passBox.Size = UDim2.new(1, -20, 0, 30)
-passBox.Position = UDim2.new(0, 10, 0.5, -15)
-passBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-passBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-passBox.Font = Enum.Font.Gotham
-passBox.TextSize = 14
-passBox.PlaceholderText = "Password"
-passBox.Parent = mainFrame
-local boxCorner = Instance.new("UICorner")
-boxCorner.CornerRadius = UDim.new(0, 8)
-boxCorner.Parent = passBox
-
-local submitBtn = Instance.new("TextButton")
-submitBtn.Size = UDim2.new(0, 100, 0, 30)
-submitBtn.Position = UDim2.new(0.5, -50, 1, -45)
-submitBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-submitBtn.Font = Enum.Font.GothamBold
-submitBtn.TextSize = 16
-submitBtn.Text = "Submit"
-submitBtn.Parent = mainFrame
-local submitCorner = Instance.new("UICorner")
-submitCorner.CornerRadius = UDim.new(0, 8)
-submitCorner.Parent = submitBtn
-
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, 0, 0, 20)
-statusLabel.Position = UDim2.new(0, 0, 1, -75)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = ""
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.TextSize = 13
-statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-statusLabel.TextXAlignment = Enum.TextXAlignment.Center
-statusLabel.Parent = mainFrame
-
--- Parent the GUI
-local function parentGUI()
-    local playerGui = LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui")
-    if playerGui then
-        screenGui.Parent = playerGui
-        return true
-    end
-    local gui = game:GetService("CoreGui") or game:GetService("StarterGui")
-    pcall(function() screenGui.Parent = gui end)
-    return screenGui.Parent ~= nil
+if not isPlayerWhitelisted(player.Name) then
+    warn("You are not whitelisted for this script.")
+    return  -- Stop execution – do not load the main script
 end
-parentGUI()
 
-submitBtn.MouseButton1Click:Connect(function()
-    local password = passBox.Text
-    if #password == 0 then
-        statusLabel.Text = "Please enter your password."
-        return
-    end
-    local valid, reason = validatePassword(password)
-    if valid then
-        statusLabel.Text = "✅ Valid – loading script..."
-        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-        task.wait(0.5)
-        screenGui:Destroy()
+-- If whitelisted, create the main dash script inside the player's PlayerGui
+local playerGui = player:WaitForChild("PlayerGui")
 
-        -- Load main script from GitHub
-        local success, result = pcall(function()
-            return game:HttpGet(SCRIPT_URL)
-        end)
-        if success and result then
-            local func, err = loadstring(result)
-            if func then
-                func()
-            else
-                warn("Failed to compile main script: " .. tostring(err))
-            end
-        else
-            warn("Failed to fetch main script: " .. tostring(result))
-        end
-    else
-        if reason == "expired" then
-            statusLabel.Text = "❌ This password has expired."
-        elseif reason == "wrong user" then
-            statusLabel.Text = "❌ Password not meant for this user."
-        else
-            statusLabel.Text = "❌ Invalid password."
-        end
-        statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-    end
+-- Avoid duplicate main scripts
+local mainScript = playerGui:FindFirstChild("DashMainScript")
+if mainScript then mainScript:Destroy() end
+
+-- Create a new LocalScript that contains the main dash code
+local newScript = Instance.new("LocalScript")
+newScript.Name = "DashMainScript"
+newScript.Source = [=[
+
+-- ====================================================
+--  MAIN DASH SCRIPT (copied from the original)
+--  No whitelist check – it is only loaded when allowed.
+-- ====================================================
+
+local _call5 = game:GetService('UserInputService')
+game:GetService('VirtualInputManager')
+local _LocalPlayer10 = game:GetService('Players').LocalPlayer
+
+_call5.InputBegan:Connect(function(_14, _14_2, _14_3, _14_4, _14_5) end)
+
+local _call16 = _LocalPlayer10:WaitForChild('PlayerGui')
+
+-- Destroy any existing DashGui (if any)
+local existingGui = _call16:FindFirstChild('DashGui')
+if existingGui then existingGui:Destroy() end
+
+local _call22 = Instance.new('ScreenGui')
+_call22.Name = 'DashGui'
+_call22.ResetOnSpawn = false
+_call22.IgnoreGuiInset = true
+_call22.Parent = _call16
+
+local _call24 = Instance.new('Frame')
+_call24.Name = 'Container'
+_call24.Size = UDim2.new(0, 140, 0, 125)
+_call24.Position = UDim2.new(1, -160, 1, -145)
+_call24.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+_call24.BackgroundTransparency = 0.15
+_call24.BorderSizePixel = 0
+_call24.Active = true
+_call24.Parent = _call22
+
+local _call32 = Instance.new('UICorner')
+_call32.CornerRadius = UDim.new(0, 8)
+_call32.Parent = _call24
+
+_call24.InputBegan:Connect(function(_38, _38_2, _38_3)
+    local _ = _38.UserInputType == Enum.UserInputType.MouseButton1
+    local _ = _38.UserInputType == Enum.UserInputType.Touch
+end)
+_call24.InputChanged:Connect(function(_50, _50_2, _50_3, _50_4, _50_5, _50_6)
+    local _ = _50.UserInputType == Enum.UserInputType.MouseMovement
+    local _ = _50.UserInputType == Enum.UserInputType.Touch
+end)
+_call5.InputChanged:Connect(function(_62, _62_2, _62_3, _62_4) end)
+
+local _call64 = Instance.new('TextLabel')
+_call64.Name = 'Title'
+_call64.Size = UDim2.new(1, 0, 0, 20)
+_call64.Position = UDim2.new(0, 0, 0, 4)
+_call64.BackgroundTransparency = 1
+_call64.Text = 'DASH'
+_call64.TextColor3 = Color3.fromRGB(255, 255, 255)
+_call64.Font = Enum.Font.GothamBold
+_call64.TextSize = 14
+_call64.Parent = _call24
+
+local _call74 = Instance.new('TextButton')
+_call74.Name = 'DashRButton'
+_call74.Size = UDim2.new(1, -16, 0, 28)
+_call74.Position = UDim2.new(0, 8, 0, 28)
+_call74.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+_call74.Text = 'Dash (R)'
+_call74.TextColor3 = Color3.fromRGB(255, 255, 255)
+_call74.Font = Enum.Font.GothamMedium
+_call74.TextSize = 13
+_call74.AutoButtonColor = true
+_call74.Parent = _call24
+
+local _call86 = Instance.new('UICorner')
+_call86.CornerRadius = UDim.new(0, 6)
+_call86.Parent = _call74
+
+_call74.MouseButton1Click:Connect(function(_92, _92_2)
+    local _Character93 = _LocalPlayer10.Character
+    local _call96 = _LocalPlayer10.Character:WaitForChild('HumanoidRootPart')
+    local _call100 = _Character93:FindFirstChildOfClass('Humanoid'):FindFirstChildOfClass('Animator')
+    local _call102 = Instance.new('Animation')
+    _call102.AnimationId = 'rbxassetid://10480793962'
+    _call100:LoadAnimation(_call102):Play()
+
+    local _Position109 = _call96.Position
+    game:GetService('RunService').RenderStepped:Connect(function(_115, _115_2)
+        local _call118 = _LocalPlayer10.Character:WaitForChild('HumanoidRootPart')
+        local _call120 = _Position109:Lerp((_Position109 + (_call96.CFrame.RightVector * 28)), 0.00490381478567492)
+        _call118.CFrame = CFrame.new(_call120, (_call120 + _call118.CFrame.LookVector))
+    end)
 end)
 
-passBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        submitBtn.MouseButton1Click:Fire()
-    end
+local _call127 = Instance.new('TextButton')
+_call127.Name = 'DashTButton'
+_call127.Size = UDim2.new(1, -16, 0, 28)
+_call127.Position = UDim2.new(0, 8, 0, 60)
+_call127.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+_call127.Text = 'Dash Jump (T)'
+_call127.TextColor3 = Color3.fromRGB(255, 255, 255)
+_call127.Font = Enum.Font.GothamMedium
+_call127.TextSize = 13
+_call127.AutoButtonColor = true
+_call127.Parent = _call24
+
+local _call139 = Instance.new('UICorner')
+_call139.CornerRadius = UDim.new(0, 6)
+_call139.Parent = _call127
+
+_call127.MouseButton1Click:Connect(function(_145, _145_2) end)
+
+local _call147 = Instance.new('TextButton')
+_call147.Name = 'AutoRotateToggle'
+_call147.Size = UDim2.new(1, -16, 0, 28)
+_call147.Position = UDim2.new(0, 8, 0, 92)
+_call147.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+_call147.Text = 'Auto Rotate'
+_call147.TextColor3 = Color3.fromRGB(255, 255, 255)
+_call147.Font = Enum.Font.GothamMedium
+_call147.TextSize = 13
+_call147.AutoButtonColor = false
+_call147.Parent = _call24
+
+local _call159 = Instance.new('UICorner')
+_call159.CornerRadius = UDim.new(0, 6)
+_call159.Parent = _call147
+
+_call147.MouseButton1Click:Connect(function(_165, _165_2, _165_3, _165_4)
+    _call147.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
 end)
+
+_LocalPlayer10.CharacterAdded:Connect(function(_171, _171_2, _171_3, _171_4, _171_5)
+    task.wait(1)
+    _LocalPlayer10.PlayerGui:FindFirstChild('DashGui')
+end)
+
+]=]
+
+-- Place the script in PlayerGui so it runs in the client
+newScript.Parent = playerGui
+
+print("✅ Whitelist passed – Main Dash Script loaded.")
