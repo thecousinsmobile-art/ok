@@ -1,6 +1,6 @@
 --[[
     M1 Reset + Emote Dash – Main Script
-    Keybinds: R = M1 Reset, V = Emote Dash (no spin)
+    Keybinds: R = M1 Reset, V = Emote Dash (dash only, no spin)
 ]]
 
 local vu1 = game:GetService("Players").LocalPlayer
@@ -28,7 +28,7 @@ if not vu6 then
 end
 local vu9 = {
     M1_RESET = Enum.KeyCode.R,
-    EMOTE_DASH = Enum.KeyCode.V  -- Changed from T to V
+    EMOTE_DASH = Enum.KeyCode.V
 }
 getgenv().connections = getgenv().connections or {}
 if type(getgenv().connections) == "table" then
@@ -311,15 +311,12 @@ local function vu91()
     end)
 end
 
--- Emote Dash – no spin, only dash and animation
+-- Emote Dash – ONLY dash, NO animation, NO spin
 local function vu92()
-    vu59()
+    vu59()  -- stop any existing animations
+    -- No animation (vu66) – to avoid any rotation
     pcall(function()
-        vu66(10480793962)
-    end)
-    -- Removed the vu75(90) spin
-    pcall(function()
-        vu90(1, 38, 8, 95, 0.27)
+        vu90(1, 38, 8, 95, 0.27)  -- dash only
     end)
 end
 
