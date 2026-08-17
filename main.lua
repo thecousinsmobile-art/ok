@@ -1,715 +1,132 @@
---[[
-    M1 Reset + Emote Dash – Main Script
-    Keybinds: R = M1 Reset, V = Emote Dash (with animation, no spin)
-]]
+-- ====================================================
+--  MAIN DASH SCRIPT – GUI and dash abilities
+--  (No whitelist check – load this only for allowed players)
+-- ====================================================
 
-local vu1 = game:GetService("Players").LocalPlayer
-local vu2 = game:GetService("UserInputService")
-local vu3 = game:GetService("TweenService")
-local vu4 = game:GetService("RunService")
-local v5 = game:GetService("Workspace")
-game:GetService("ReplicatedStorage")
-local vu6 = nil
-pcall(function()
-    vu6 = game:GetService("VirtualInputManager")
-end)
-if not vu6 then
-    local v7 = rawget(_G, "VirtualInputManager")
-    if v7 then
-        vu6 = v7
-    else
-        local v8 = rawget(_G, "syn") and rawget(_G, "syn").virtual_input
-        if v8 then
-            vu6 = v8
-        else
-            vu6 = rawget(_G, "virtualinputmanager")
-        end
-    end
-end
-local vu9 = {
-    M1_RESET = Enum.KeyCode.R,
-    EMOTE_DASH = Enum.KeyCode.V
-}
-getgenv().connections = getgenv().connections or {}
-if type(getgenv().connections) == "table" then
-    local v10, v11, v12 = ipairs(getgenv().connections)
-    while true do
-        local vu13
-        v12, vu13 = v10(v11, v12)
-        if v12 == nil then
-            break
-        end
-        pcall(function()
-            if vu13 and vu13.Disconnect then
-                vu13:Disconnect()
-            end
-        end)
-    end
-end
-getgenv().connections = {}
-local function vu21(p14)
-    local v15 = p14 or 2
-    if type(gethui) == "function" then
-        local v16, v17 = pcall(gethui)
-        if v16 and v17 then
-            return v17
-        end
-    end
-    if vu1 then
-        local v18 = tick()
-        while tick() - v18 < v15 do
-            if vu1:FindFirstChild("PlayerGui") then
-                return vu1.PlayerGui
-            end
-            task.wait(0.05)
-        end
-        if vu1:FindFirstChild("PlayerGui") then
-            return vu1.PlayerGui
-        end
-    end
-    local v19, v20 = pcall(function()
-        return game:GetService("CoreGui")
-    end)
-    return v19 and v20 and v20 or game:GetService("StarterGui")
-end
-local vu22 = vu21(3)
-pcall(function()
-    local v23, v24, v25 = ipairs({
-        "M1_RESET_UI",
-        "TSB_UI",
-        "M1ResetUI"
-    })
-    while true do
-        local v26
-        v25, v26 = v23(v24, v25)
-        if v25 == nil then
-            break
-        end
-        local v27 = vu22:FindFirstChild(v26)
-        if v27 then
-            v27:Destroy()
-        end
-    end
-end)
-local function v30(pu28)
-    local vu29 = rawget(_G, "syn")
-    if vu29 and type(vu29.protect_gui) == "function" then
-        pcall(function()
-            vu29.protect_gui(pu28)
-        end)
-    end
-end
-local vu31 = {
-    {
-        name = "Dark",
-        Panel = Color3.fromRGB(30, 30, 30),
-        Button = Color3.fromRGB(50, 50, 50),
-        Accent = Color3.fromRGB(200, 200, 200),
-        Text = Color3.fromRGB(255, 255, 255)
-    },
-    {
-        name = "Gray",
-        Panel = Color3.fromRGB(60, 60, 60),
-        Button = Color3.fromRGB(80, 80, 80),
-        Accent = Color3.fromRGB(150, 150, 150),
-        Text = Color3.fromRGB(255, 255, 255)
-    },
-    {
-        name = "Black",
-        Panel = Color3.fromRGB(20, 20, 20),
-        Button = Color3.fromRGB(40, 40, 40),
-        Accent = Color3.fromRGB(100, 100, 100),
-        Text = Color3.fromRGB(255, 255, 255)
-    },
-    {
-        name = "Neon",
-        Panel = Color3.fromRGB(10, 10, 10),
-        Button = Color3.fromRGB(0, 200, 255),
-        Accent = Color3.fromRGB(255, 0, 255),
-        Text = Color3.fromRGB(255, 255, 255)
-    },
-    {
-        name = "Cyber",
-        Panel = Color3.fromRGB(15, 15, 20),
-        Button = Color3.fromRGB(35, 35, 45),
-        Accent = Color3.fromRGB(0, 255, 150),
-        Text = Color3.fromRGB(255, 255, 255)
-    }
-}
-local vu32 = 1
-local vu33 = vu31[1]
-local function vu37(p34, p35)
-    local v36 = Instance.new("UICorner")
-    v36.CornerRadius = UDim.new(0, p35 or 12)
-    v36.Parent = p34
-end
-local function vu43(p38, p39, p40, p41)
-    local v42 = Instance.new("UIStroke")
-    v42.Color = p39 or vu33.Accent
-    v42.Thickness = p40 or 1
-    v42.Transparency = p41 or 0.5
-    v42.Parent = p38
-end
-local vu44 = {}
-local vu45 = false
-local vu46 = {}
-local vu47 = v5.CurrentCamera
-local function vu50()
-    local v48 = vu1
-    if v48 then
-        v48 = vu1.Character
-    end
-    local v49
-    if v48 then
-        v49 = v48:FindFirstChildOfClass("Humanoid")
-    else
-        v49 = v48
-    end
-    return v48, v49
-end
-local function vu59()
-    local _, v51 = vu50()
-    local vu52 = v51 and v51:FindFirstChildOfClass("Animator")
-    if vu52 then
-        local v53, v54 = pcall(function()
-            return vu52:GetPlayingAnimationTracks()
-        end)
-        if v53 and v54 then
-            local v55, v56, v57 = ipairs(v54)
-            while true do
-                local vu58
-                v57, vu58 = v55(v56, v57)
-                if v57 == nil then
-                    break
-                end
-                pcall(function()
-                    vu58:Stop()
-                end)
-            end
-        end
-    end
-end
-local function vu66(p60)
-    local _, v61 = vu50()
-    if v61 then
-        local vu62 = v61:FindFirstChildOfClass("Animator")
-        if not vu62 then
-            vu62 = Instance.new("Animator")
-            vu62.Parent = v61
-        end
-        local vu63 = vu46[p60]
-        if not vu63 then
-            vu63 = Instance.new("Animation")
-            vu63.AnimationId = "rbxassetid://" .. tostring(p60)
-            vu46[p60] = vu63
-        end
-        local v64, vu65 = pcall(function()
-            return vu62:LoadAnimation(vu63)
-        end)
-        if v64 and vu65 then
-            vu65.Priority = Enum.AnimationPriority.Action
-            vu65:Play()
-            pcall(function()
-                vu65:AdjustSpeed(1.2)
-            end)
-            return vu65
-        end
-    end
-end
-local function vu75(pu67)
-    if not vu45 then
-        vu45 = true
-        local vu68, _ = vu50()
-        if vu68 then
-            vu68 = vu68:FindFirstChild("HumanoidRootPart")
-        end
-        if vu68 then
-            pcall(function()
-                vu68.CFrame = vu68.CFrame * CFrame.Angles(0, math.rad(pu67), 0)
-                local v69 = vu47 and vu47.CFrame.Position or vu68.Position + Vector3.new(0, 5, 0)
-                local v70 = v69.Y
-                local v71 = v69 - vu68.Position
-                local v72 = Vector3.new(v71.X, 0, v71.Z)
-                local v73 = CFrame.fromAxisAngle(Vector3.yAxis, math.rad(pu67)) * v72
-                local v74 = vu68.Position + v73
-                if vu47 and vu47:IsA("Camera") then
-                    vu47.CFrame = CFrame.lookAt(Vector3.new(v74.X, v70, v74.Z), vu68.Position)
-                end
-            end)
-        end
-        vu45 = false
-    end
-end
-local function vu81(p76, p77, p78)
-    if not vu45 then
-        vu45 = true
-        local v79, _ = vu50()
-        if v79 then
-            v79 = v79:FindFirstChild("HumanoidRootPart")
-        end
-        if v79 then
-            local vu80 = vu3:Create(v79, TweenInfo.new(p78, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-                CFrame = v79.CFrame * CFrame.new(p76 * p77, 0, 0)
-            })
-            pcall(function()
-                vu80:Play()
-            end)
-            if vu80 then
-                pcall(function()
-                    vu80.Completed:Wait()
-                end)
-            end
-            pcall(function()
-                vu80:Destroy()
-            end)
-        end
-        vu45 = false
-    end
-end
-local function vu90(p82, p83, p84, p85, p86)
-    if not vu45 then
-        vu45 = true
-        local v87, _ = vu50()
-        if v87 then
-            v87 = v87:FindFirstChild("HumanoidRootPart")
-        end
-        if v87 then
-            local vu88 = Instance.new("BodyVelocity")
-            local v89 = v87.CFrame.RightVector * p82 * p83 + Vector3.new(0, p84, 0)
-            if v89.Magnitude == 0 then
-                v89 = Vector3.new(0, 1, 0)
-            end
-            vu88.Velocity = v89.Unit * p85
-            vu88.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-            vu88.Parent = v87
-            task.delay(p86, function()
-                pcall(function()
-                    vu88:Destroy()
-                end)
-            end)
-        end
-        vu45 = false
-    end
-end
-local function vu91()
-    vu59()
-    pcall(function()
-        vu66(10480793962)  -- Animation for M1 Reset (spins, but that's intended)
-    end)
-    pcall(function()
-        vu81(1, 26, 0.22)
-    end)
-    pcall(function()
-        vu75(70)
-    end)
-    task.wait(0.003)
-    pcall(function()
-        if vu6 and type(vu6.SendKeyEvent) == "function" then
-            vu6:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
-            vu6:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-        end
-    end)
-end
+local _call5 = game:GetService('UserInputService')
+game:GetService('VirtualInputManager')
+local _LocalPlayer10 = game:GetService('Players').LocalPlayer
 
--- Emote Dash – uses a different animation (wave) that does NOT spin
-local function vu92()
-    vu59()  -- stop current animations
-    pcall(function()
-        vu66(10586968306)  -- Wave animation – no root rotation
-    end)
-    pcall(function()
-        vu90(1, 38, 8, 95, 0.27)  -- dash forward
-    end)
-end
+_call5.InputBegan:Connect(function(_14, _14_2, _14_3, _14_4, _14_5) end)
 
-if vu6 then
-    local _ = type(vu6.SendKeyEvent) == "function"
-end
-local vu93 = Instance.new("ScreenGui")
-vu93.Name = "M1_RESET_UI"
-vu93.ResetOnSpawn = false
-vu93.IgnoreGuiInset = true
-vu93.DisplayOrder = 9999
-vu93.ZIndexBehavior = Enum.ZIndexBehavior.Global;
-(function()
-    local vu94 = vu1 and vu1:FindFirstChild("PlayerGui") or (game:GetService("CoreGui") or game:GetService("StarterGui"))
-    if pcall(function()
-        vu93.Parent = vu94
-    end) and vu93.Parent then
-        return true
-    end
-    local vu95 = vu21(2)
-    local v96 = pcall(function()
-        vu93.Parent = vu95
-    end)
-    if v96 then
-        v96 = vu93.Parent
-    end
-    return v96
-end)()
-v30(vu93)
-local function vu108()
-    local v97 = vu93
-    local v98, v99, v100 = ipairs(v97:GetDescendants())
-    while true do
-        local v101
-        v100, v101 = v98(v99, v100)
-        if v100 == nil then
-            break
-        end
-        if v101:IsA("TextLabel") or v101:IsA("TextButton") then
-            v101.TextColor3 = vu33.Text
-        end
-        if v101:IsA("Frame") then
-            v101.BackgroundColor3 = vu33.Panel
-        end
-        if v101:IsA("TextButton") and v101.Name ~= "MobileBtn" then
-            v101.BackgroundColor3 = vu33.Button
-        end
-        local vu102 = v101:FindFirstChildOfClass("UIStroke")
-        if vu102 then
-            pcall(function()
-                vu102.Color = vu33.Accent
-            end)
-        end
-    end
-    local v103, v104, v105 = ipairs(vu44)
-    while true do
-        local v106
-        v105, v106 = v103(v104, v105)
-        if v105 == nil then
-            break
-        end
-        if v106 then
-            v106.BackgroundColor3 = vu33.Button
-            v106.TextColor3 = vu33.Text
-            local vu107 = v106:FindFirstChildOfClass("UIStroke")
-            if vu107 then
-                pcall(function()
-                    vu107.Color = vu33.Accent
-                end)
-            end
-        end
-    end
-end
-local vu109 = Instance.new("Frame", vu93)
-vu109.Size = UDim2.fromOffset(300, 160)
-vu109.Position = UDim2.new(0.5, - 150, 0.1, - 200)
-vu109.BackgroundColor3 = vu33.Panel
-vu109.BackgroundTransparency = 0.15
-vu37(vu109, 14)
-vu43(vu109, vu33.Accent, 1, 0.5)
-local v110 = Instance.new("TextLabel", vu109)
-v110.Size = UDim2.fromScale(1, 1)
-v110.BackgroundTransparency = 1
-v110.TextColor3 = vu33.Text
-v110.Font = Enum.Font.GothamBold
-v110.TextSize = 20
-v110.TextWrapped = true
-v110.Text = "M1 Reset by dovi!\nKeybinds: R = M1 Reset | V = Emote Dash"
-pcall(function()
-    vu3:Create(vu109, TweenInfo.new(0.5, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0.5, - 150, 0.1, 0)
-    }):Play()
+local _call16 = _LocalPlayer10:WaitForChild('PlayerGui')
+
+-- Destroy any existing DashGui (if any)
+local existingGui = _call16:FindFirstChild('DashGui')
+if existingGui then existingGui:Destroy() end
+
+local _call22 = Instance.new('ScreenGui')
+_call22.Name = 'DashGui'
+_call22.ResetOnSpawn = false
+_call22.IgnoreGuiInset = true
+_call22.Parent = _call16
+
+local _call24 = Instance.new('Frame')
+_call24.Name = 'Container'
+_call24.Size = UDim2.new(0, 140, 0, 125)
+_call24.Position = UDim2.new(1, -160, 1, -145)
+_call24.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+_call24.BackgroundTransparency = 0.15
+_call24.BorderSizePixel = 0
+_call24.Active = true
+_call24.Parent = _call22
+
+local _call32 = Instance.new('UICorner')
+_call32.CornerRadius = UDim.new(0, 8)
+_call32.Parent = _call24
+
+_call24.InputBegan:Connect(function(_38, _38_2, _38_3)
+    local _ = _38.UserInputType == Enum.UserInputType.MouseButton1
+    local _ = _38.UserInputType == Enum.UserInputType.Touch
 end)
-task.delay(4, function()
-    pcall(function()
-        vu3:Create(vu109, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(0.5, - 150, 0.1, - 200)
-        }):Play()
-    end)
-    task.wait(0.4)
-    pcall(function()
-        if vu109 and vu109.Parent then
-            vu109:Destroy()
-        end
+_call24.InputChanged:Connect(function(_50, _50_2, _50_3, _50_4, _50_5, _50_6)
+    local _ = _50.UserInputType == Enum.UserInputType.MouseMovement
+    local _ = _50.UserInputType == Enum.UserInputType.Touch
+end)
+_call5.InputChanged:Connect(function(_62, _62_2, _62_3, _62_4) end)
+
+local _call64 = Instance.new('TextLabel')
+_call64.Name = 'Title'
+_call64.Size = UDim2.new(1, 0, 0, 20)
+_call64.Position = UDim2.new(0, 0, 0, 4)
+_call64.BackgroundTransparency = 1
+_call64.Text = 'DASH'
+_call64.TextColor3 = Color3.fromRGB(255, 255, 255)
+_call64.Font = Enum.Font.GothamBold
+_call64.TextSize = 14
+_call64.Parent = _call24
+
+local _call74 = Instance.new('TextButton')
+_call74.Name = 'DashRButton'
+_call74.Size = UDim2.new(1, -16, 0, 28)
+_call74.Position = UDim2.new(0, 8, 0, 28)
+_call74.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+_call74.Text = 'Dash (R)'
+_call74.TextColor3 = Color3.fromRGB(255, 255, 255)
+_call74.Font = Enum.Font.GothamMedium
+_call74.TextSize = 13
+_call74.AutoButtonColor = true
+_call74.Parent = _call24
+
+local _call86 = Instance.new('UICorner')
+_call86.CornerRadius = UDim.new(0, 6)
+_call86.Parent = _call74
+
+_call74.MouseButton1Click:Connect(function(_92, _92_2)
+    local _Character93 = _LocalPlayer10.Character
+    local _call96 = _LocalPlayer10.Character:WaitForChild('HumanoidRootPart')
+    local _call100 = _Character93:FindFirstChildOfClass('Humanoid'):FindFirstChildOfClass('Animator')
+    local _call102 = Instance.new('Animation')
+    _call102.AnimationId = 'rbxassetid://10480793962'
+    _call100:LoadAnimation(_call102):Play()
+
+    local _Position109 = _call96.Position
+    game:GetService('RunService').RenderStepped:Connect(function(_115, _115_2)
+        local _call118 = _LocalPlayer10.Character:WaitForChild('HumanoidRootPart')
+        local _call120 = _Position109:Lerp((_Position109 + (_call96.CFrame.RightVector * 28)), 0.00490381478567492)
+        _call118.CFrame = CFrame.new(_call120, (_call120 + _call118.CFrame.LookVector))
     end)
 end)
-local vu111 = Instance.new("Frame", vu93)
-vu111.Size = UDim2.new(0, 190, 0, 200)
-vu111.Position = UDim2.new(0, 20, 0.5, 0)
-vu111.BackgroundColor3 = vu33.Panel
-vu111.BackgroundTransparency = 1
-vu37(vu111, 16)
-vu43(vu111, vu33.Accent, 1, 0.5)
-pcall(function()
-    vu3:Create(vu111, TweenInfo.new(0.4), {
-        BackgroundTransparency = 0.2
-    }):Play()
+
+local _call127 = Instance.new('TextButton')
+_call127.Name = 'DashTButton'
+_call127.Size = UDim2.new(1, -16, 0, 28)
+_call127.Position = UDim2.new(0, 8, 0, 60)
+_call127.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+_call127.Text = 'Dash Jump (T)'
+_call127.TextColor3 = Color3.fromRGB(255, 255, 255)
+_call127.Font = Enum.Font.GothamMedium
+_call127.TextSize = 13
+_call127.AutoButtonColor = true
+_call127.Parent = _call24
+
+local _call139 = Instance.new('UICorner')
+_call139.CornerRadius = UDim.new(0, 6)
+_call139.Parent = _call127
+
+_call127.MouseButton1Click:Connect(function(_145, _145_2) end)
+
+local _call147 = Instance.new('TextButton')
+_call147.Name = 'AutoRotateToggle'
+_call147.Size = UDim2.new(1, -16, 0, 28)
+_call147.Position = UDim2.new(0, 8, 0, 92)
+_call147.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+_call147.Text = 'Auto Rotate'
+_call147.TextColor3 = Color3.fromRGB(255, 255, 255)
+_call147.Font = Enum.Font.GothamMedium
+_call147.TextSize = 13
+_call147.AutoButtonColor = false
+_call147.Parent = _call24
+
+local _call159 = Instance.new('UICorner')
+_call159.CornerRadius = UDim.new(0, 6)
+_call159.Parent = _call147
+
+_call147.MouseButton1Click:Connect(function(_165, _165_2, _165_3, _165_4)
+    _call147.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
 end)
-local vu112 = false
-local vu113 = nil
-local vu114 = nil
-local vu115 = nil
-vu111.InputBegan:Connect(function(pu116)
-    if pu116.UserInputType == Enum.UserInputType.MouseButton1 or pu116.UserInputType == Enum.UserInputType.Touch then
-        vu112 = true
-        vu113 = pu116
-        vu114 = pu116.Position
-        vu115 = vu111.Position
-        pu116.Changed:Connect(function()
-            if pu116.UserInputState == Enum.UserInputState.End then
-                vu112 = false
-            end
-        end)
-    end
+
+_LocalPlayer10.CharacterAdded:Connect(function(_171, _171_2, _171_3, _171_4, _171_5)
+    task.wait(1)
+    _LocalPlayer10.PlayerGui:FindFirstChild('DashGui')
 end)
-vu111.InputChanged:Connect(function(p117)
-    if p117.UserInputType == Enum.UserInputType.MouseMovement or p117.UserInputType == Enum.UserInputType.Touch then
-        vu113 = p117
-    end
-end)
-vu4.RenderStepped:Connect(function()
-    if vu112 and (vu113 and (vu114 and vu115)) then
-        local v118 = vu113.Position - vu114
-        vu111.Position = UDim2.new(vu115.X.Scale, vu115.X.Offset + v118.X, vu115.Y.Scale, vu115.Y.Offset + v118.Y)
-    end
-end)
-local v119 = Instance.new("Frame", vu111)
-v119.Size = UDim2.new(1, 0, 0, 34)
-v119.BackgroundTransparency = 1
-local v120 = Instance.new("TextLabel", v119)
-v120.Size = UDim2.new(1, - 130, 1, 0)
-v120.Position = UDim2.new(0, 12, 0, 0)
-v120.BackgroundTransparency = 1
-v120.Text = "M1 reset by dovi!"
-v120.Font = Enum.Font.GothamBlack
-v120.TextSize = 16
-v120.TextColor3 = vu33.Text
-v120.TextXAlignment = Enum.TextXAlignment.Left
-local vu121 = Instance.new("TextButton", v119)
-vu121.Size = UDim2.new(0, 100, 0, 30)
-vu121.Position = UDim2.new(1, - 110, 0.5, - 15)
-vu121.BackgroundColor3 = vu33.Button
-vu121.TextColor3 = vu33.Text
-vu121.Font = Enum.Font.GothamBold
-vu121.TextSize = 14
-vu121.Text = "Theme: " .. vu33.name
-vu37(vu121, 10)
-vu43(vu121, vu33.Accent, 1, 0.5)
-vu121.MouseButton1Click:Connect(function()
-    vu32 = vu32 % # vu31 + 1
-    vu33 = vu31[vu32]
-    vu121.Text = "Theme: " .. vu33.name
-    vu108()
-end)
-local vu122 = {}
-local function v127(p123, p124, pu125)
-    local vu126 = Instance.new("TextButton", vu111)
-    vu126.Size = UDim2.new(1, - 24, 0, 44)
-    vu126.Position = UDim2.new(0, 12, 0, p124)
-    vu126.BackgroundColor3 = vu33.Button
-    vu126.TextColor3 = vu33.Text
-    vu126.Font = Enum.Font.GothamBold
-    vu126.TextSize = 16
-    vu126.Text = p123
-    vu37(vu126, 12)
-    vu43(vu126, vu33.Accent, 1, 0.5)
-    vu126.AutoButtonColor = false
-    vu126.MouseEnter:Connect(function()
-        pcall(function()
-            vu3:Create(vu126, TweenInfo.new(0.15), {
-                BackgroundColor3 = vu33.Accent,
-                Size = UDim2.new(1, - 22, 0, 46)
-            }):Play()
-        end)
-    end)
-    vu126.MouseLeave:Connect(function()
-        pcall(function()
-            vu3:Create(vu126, TweenInfo.new(0.15), {
-                BackgroundColor3 = vu33.Button,
-                Size = UDim2.new(1, - 24, 0, 44)
-            }):Play()
-        end)
-    end)
-    vu126.MouseButton1Down:Connect(function()
-        pcall(function()
-            vu3:Create(vu126, TweenInfo.new(0.1), {
-                Size = UDim2.new(1, - 26, 0, 42)
-            }):Play()
-        end)
-    end)
-    vu126.MouseButton1Up:Connect(function()
-        pcall(function()
-            vu3:Create(vu126, TweenInfo.new(0.1), {
-                Size = UDim2.new(1, - 22, 0, 46)
-            }):Play()
-        end)
-    end)
-    vu126.MouseButton1Click:Connect(function()
-        task.spawn(function()
-            pcall(pu125)
-        end)
-    end)
-    table.insert(vu122, vu126)
-    return vu126
-end
-local vu128 = v127("M1 Reset", 54, vu91)
-local vu129 = v127("Emote Dash", 104, vu92)
-local vu134 = v127("Unload", 154, function()
-    local v130, v131, v132 = ipairs(getgenv().connections)
-    while true do
-        local vu133
-        v132, vu133 = v130(v131, v132)
-        if v132 == nil then
-            break
-        end
-        pcall(function()
-            if vu133 and vu133.Disconnect then
-                vu133:Disconnect()
-            end
-        end)
-    end
-    getgenv().connections = {}
-    pcall(function()
-        vu93:Destroy()
-    end)
-end)
-local vu135 = false
-local function vu151(p136, p137)
-    task.wait(0.1)
-    local v138 = vu47 and vu47.ViewportSize or Vector2.new(1920, 1080)
-    local v139 = 20 + (p137 - 1) * 150
-    local v140 = v138.Y - 100
-    local vu141 = Instance.new("TextButton", vu93)
-    vu141.Size = UDim2.new(0, 140, 0, 45)
-    vu141.Position = UDim2.new(0, math.clamp(v139, 12, v138.X - 150), 0, math.clamp(v140, 12, v138.Y - 60))
-    vu141.BackgroundColor3 = vu33.Button
-    vu141.TextColor3 = vu33.Text
-    vu141.Font = p136.Font
-    vu141.TextSize = p136.TextSize
-    vu141.Text = p136.Text
-    vu37(vu141, 12)
-    vu43(vu141, vu33.Accent, 1, 0.5)
-    vu141.ZIndex = 100
-    vu141.BackgroundTransparency = 1
-    vu141.TextTransparency = 1
-    pcall(function()
-        vu3:Create(vu141, TweenInfo.new(0.3), {
-            BackgroundTransparency = 0,
-            TextTransparency = 0
-        }):Play()
-    end)
-    vu141.MouseButton1Click:Connect(function()
-        if vu141.Text:match("M1") then
-            pcall(vu91)
-        elseif vu141.Text:match("Emote") then
-            pcall(vu92)
-        end
-    end)
-    local vu142 = false
-    local vu143 = nil
-    local vu144 = nil
-    local vu145 = nil
-    vu141.InputBegan:Connect(function(pu146)
-        if pu146.UserInputType == Enum.UserInputType.MouseButton1 or pu146.UserInputType == Enum.UserInputType.Touch then
-            vu142 = true
-            vu143 = pu146
-            vu144 = pu146.Position
-            vu145 = Vector2.new(vu141.Position.X.Offset, vu141.Position.Y.Offset)
-            pu146.Changed:Connect(function()
-                if pu146.UserInputState == Enum.UserInputState.End then
-                    vu142 = false
-                end
-            end)
-        end
-    end)
-    vu141.InputChanged:Connect(function(p147)
-        if p147.UserInputType == Enum.UserInputType.MouseMovement or p147.UserInputType == Enum.UserInputType.Touch then
-            vu143 = p147
-        end
-    end)
-    local vu150 = vu4.RenderStepped:Connect(function()
-        if vu142 and (vu143 and (vu144 and vu145)) then
-            local v148 = vu143.Position - vu144
-            local v149 = vu145 + Vector2.new(v148.X, v148.Y)
-            vu141.Position = UDim2.new(0, v149.X, 0, v149.Y)
-        end
-    end)
-    vu141.AncestryChanged:Connect(function()
-        if not vu141.Parent and vu150 then
-            vu150:Disconnect()
-        end
-    end)
-    return vu141
-end
-local vu152 = Instance.new("TextButton", vu111)
-vu152.Size = UDim2.new(0, 100, 0, 30)
-vu152.Position = UDim2.new(1, - 110, 1, 5)
-vu152.BackgroundColor3 = vu33.Button
-vu152.TextColor3 = vu33.Text
-vu152.Font = Enum.Font.GothamBold
-vu152.TextSize = 14
-vu152.Text = "Mobile: OFF"
-vu37(vu152, 10)
-vu43(vu152, vu33.Accent, 1, 0.5)
-vu152.MouseButton1Click:Connect(function()
-    vu135 = not vu135
-    vu152.Text = vu135 and "Mobile: ON" or "Mobile: OFF"
-    if vu135 then
-        pcall(function()
-            vu3:Create(vu111, TweenInfo.new(0.3), {
-                Size = UDim2.new(0, 160, 0, 100)
-            }):Play()
-        end)
-        vu111.Position = UDim2.new(0, 20, 0.6, 0)
-        vu128.Visible = false
-        vu129.Visible = false
-        pcall(function()
-            vu3:Create(vu134, TweenInfo.new(0.3), {
-                Position = UDim2.new(0, 12, 0, 54)
-            }):Play()
-        end)
-        vu44 = {}
-        table.insert(vu44, vu151(vu128, 1))
-        table.insert(vu44, vu151(vu129, 2))
-    else
-        local v153, v154, v155 = ipairs(vu44)
-        while true do
-            local vu156
-            v155, vu156 = v153(v154, v155)
-            if v155 == nil then
-                break
-            end
-            pcall(function()
-                vu3:Create(vu156, TweenInfo.new(0.2), {
-                    BackgroundTransparency = 1,
-                    TextTransparency = 1
-                }):Play()
-            end)
-            task.wait(0.3)
-            pcall(function()
-                vu156:Destroy()
-            end)
-        end
-        vu44 = {}
-        pcall(function()
-            vu3:Create(vu111, TweenInfo.new(0.3), {
-                Size = UDim2.new(0, 190, 0, 200)
-            }):Play()
-        end)
-        vu111.Position = UDim2.new(0, 20, 0.5, 0)
-        vu128.Visible = true
-        vu129.Visible = true
-        pcall(function()
-            vu3:Create(vu134, TweenInfo.new(0.3), {
-                Position = UDim2.new(0, 12, 0, 154)
-            }):Play()
-        end)
-    end
-end)
-vu108()
-local v159 = vu2.InputBegan:Connect(function(p157, p158)
-    if p158 then
-        return
-    elseif vu2:GetFocusedTextBox() then
-        return
-    elseif p157.UserInputType == Enum.UserInputType.Keyboard then
-        if p157.KeyCode == vu9.M1_RESET then
-            pcall(vu91)
-        elseif p157.KeyCode == vu9.EMOTE_DASH then
-            pcall(vu92)
-        end
-    end
-end)
-table.insert(getgenv().connections, v159)
