@@ -1,18 +1,14 @@
--- whitelist.lua
 return {
-    -- Direct whitelist by username (no key required)
+    -- Direct whitelist (no key needed)
     usernames = {
-        ["ClaysRetake"] = "lifetime",   -- lifetime access
-        -- Add more users like: ["Friend"] = "2h"
+        ["ClaysRetake"] = "lifetime",
     },
 
-    -- Key system: key -> { username, expiry }
+    -- Keys: key -> { username, expiry }
     keys = {
         ["123"] = {
-            username = "ClaysRetake",   -- must match the player's name
-            expiry = "lifetime"         -- or "1h", "2d", etc.
+            username = "ClaysRetake",
+            expiry = "lifetime"
         },
-        -- Add more keys as needed
-        -- ["abc"] = { username = "Friend", expiry = "1d" }
     }
 }
