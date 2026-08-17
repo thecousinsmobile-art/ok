@@ -1,123 +1,343 @@
--- ============================================================
---  MAIN DASH SCRIPT – GUI and dash abilities
---  (No key/whitelist code – this is loaded after validation)
--- ============================================================
+-- dash.lua (main script)
+-- Load this with: loadstring(game:HttpGet("https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/dash.lua"))()
 
-local _call5 = game:GetService('UserInputService')
-game:GetService('VirtualInputManager')
-local _LocalPlayer10 = game:GetService('Players').LocalPlayer
+-- ===== CONFIGURATION =====
+local WHITELIST_URL = "https://raw.githubusercontent.com/thecousinsmobile-art/ok/main/whitelist.lua"  -- URL to your whitelist script
 
-_call5.InputBegan:Connect(function() end)
-
-local _call16 = _LocalPlayer10:WaitForChild('PlayerGui')
-local existing = _call16:FindFirstChild('DashGui')
-if existing then existing:Destroy() end
-
-local _call22 = Instance.new('ScreenGui')
-_call22.Name = 'DashGui'
-_call22.ResetOnSpawn = false
-_call22.IgnoreGuiInset = true
-_call22.Parent = _call16
-
-local _call24 = Instance.new('Frame')
-_call24.Name = 'Container'
-_call24.Size = UDim2.new(0, 140, 0, 125)
-_call24.Position = UDim2.new(1, -160, 1, -145)
-_call24.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-_call24.BackgroundTransparency = 0.15
-_call24.BorderSizePixel = 0
-_call24.Active = true
-_call24.Parent = _call22
-
-local _call32 = Instance.new('UICorner')
-_call32.CornerRadius = UDim.new(0, 8)
-_call32.Parent = _call24
-
-_call24.InputBegan:Connect(function() end)
-_call24.InputChanged:Connect(function() end)
-_call5.InputChanged:Connect(function() end)
-
-local _call64 = Instance.new('TextLabel')
-_call64.Name = 'Title'
-_call64.Size = UDim2.new(1, 0, 0, 20)
-_call64.Position = UDim2.new(0, 0, 0, 4)
-_call64.BackgroundTransparency = 1
-_call64.Text = 'DASH'
-_call64.TextColor3 = Color3.fromRGB(255, 255, 255)
-_call64.Font = Enum.Font.GothamBold
-_call64.TextSize = 14
-_call64.Parent = _call24
-
-local _call74 = Instance.new('TextButton')
-_call74.Name = 'DashRButton'
-_call74.Size = UDim2.new(1, -16, 0, 28)
-_call74.Position = UDim2.new(0, 8, 0, 28)
-_call74.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-_call74.Text = 'Dash (R)'
-_call74.TextColor3 = Color3.fromRGB(255, 255, 255)
-_call74.Font = Enum.Font.GothamMedium
-_call74.TextSize = 13
-_call74.AutoButtonColor = true
-_call74.Parent = _call24
-
-local _call86 = Instance.new('UICorner')
-_call86.CornerRadius = UDim.new(0, 6)
-_call86.Parent = _call74
-
-_call74.MouseButton1Click:Connect(function()
-    local char = _LocalPlayer10.Character
-    if not char then return end
-    local root = char:WaitForChild('HumanoidRootPart')
-    local humanoid = char:FindFirstChildOfClass('Humanoid')
-    if not humanoid then return end
-    local animator = humanoid:FindFirstChildOfClass('Animator')
-    local anim = Instance.new('Animation')
-    anim.AnimationId = 'rbxassetid://10480793962'
-    if animator then
-        animator:LoadAnimation(anim):Play()
-    end
-    local startPos = root.Position
-    game:GetService('RunService').RenderStepped:Connect(function()
-        if not root or not root.Parent then return end
-        local newPos = startPos:Lerp((startPos + (root.CFrame.RightVector * 28)), 0.00490381478567492)
-        root.CFrame = CFrame.new(newPos, (newPos + root.CFrame.LookVector))
+-- ===== LOAD WHITELIST =====
+local function fetchWhitelist()
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet(WHITELIST_URL))()
     end)
+    if success and type(result) == "table" then
+        return result
+    else
+        warn("Failed to load whitelist. Running with no restrictions.")
+        return nil  -- fallback: allow all (or change to an empty table to block all)
+    end
+end
+
+local whitelistData = fetchWhitelist() or {}
+
+-- ===== CHECK PLAYER =====
+local player = game:GetService("Players").LocalPlayer
+local playerName = player.Name
+
+local function parseExpiry(expiryStr)
+    if expiryStr == "lifetime" then
+        return math.huge
+    end
+    local num = tonumber(expiryStr:match("%d+"))
+    local unit = expiryStr:match("%a+")
+    if not num or not unit then return 0 end
+    local seconds = 0
+    if unit:lower():sub(1,1) == "h" then
+        seconds = num * 3600
+    elseif unit:lower():sub(1,1) == "d" then
+        seconds = num * 86400
+    else
+        seconds = 0
+    end
+    return os.time() + seconds
+end
+
+local function isWhitelisted()
+    local entry = whitelistData[playerName]
+    if not entry then return false end
+    local expiryTime = parseExpiry(entry.expiry)
+    return os.time() <= expiryTime
+end
+
+local whitelisted = isWhitelisted()
+
+if not whitelisted then
+    -- Show a simple notification and stop
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "AccessDenied"
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 300, 0, 50)
+    label.Position = UDim2.new(0.5, -150, 0.5, -25)
+    label.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    label.TextColor3 = Color3.fromRGB(255, 0, 0)
+    label.Text = "❌ Access Denied – Not whitelisted"
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 18
+    label.Parent = screenGui
+    return  -- stop execution
+end
+
+-- ===== ORIGINAL DASH SCRIPT (unchanged below) =====
+-- All original code goes here, with the only change being that we've already validated the player.
+-- Since we returned early if not whitelisted, the rest runs only for whitelisted users.
+
+-- (Copy the entire original script from your file, starting from "local Players = game:GetService("Players")" etc.)
+-- I'll include it for completeness, but you can just paste your existing code after this point.
+
+-- ===== START ORIGINAL CODE =====
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local player = Players.LocalPlayer
+
+local DASH_ANIMATION_ID = "rbxassetid://10480793962"
+
+local DASH_DISTANCE = 28
+local DASH_TIME = 0.24
+
+local JUMP_DASH_DISTANCE = 52
+local JUMP_DASH_TIME = 0.65
+local JUMP_HEIGHT = 6
+
+local busy = false
+local autoRotate = false
+
+local function getCharacter()
+    local character = player.Character
+    if not character then
+        character = player.CharacterAdded:Wait()
+    end
+    return character
+end
+
+local function getRootPart()
+    local character = getCharacter()
+    return character:WaitForChild("HumanoidRootPart")
+end
+
+local function playDashAnimation(character)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return nil end
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = humanoid
+    end
+    local animation = Instance.new("Animation")
+    animation.AnimationId = DASH_ANIMATION_ID
+    local success, track = pcall(function()
+        return animator:LoadAnimation(animation)
+    end)
+    animation:Destroy()
+    if not success then
+        warn("Could not load dash animation:", track)
+        return nil
+    end
+    track:Play()
+    return track
+end
+
+local function pressQ()
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+    task.wait()
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+end
+
+local function dash()
+    if busy then return end
+    busy = true
+    local character = getCharacter()
+    local root = getRootPart()
+    playDashAnimation(character)
+    local startPosition = root.Position
+    local targetPosition = startPosition + root.CFrame.RightVector * DASH_DISTANCE
+    local startTime = os.clock()
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not root or not root.Parent then
+            connection:Disconnect()
+            busy = false
+            return
+        end
+        local elapsed = os.clock() - startTime
+        local alpha = math.clamp(elapsed / DASH_TIME, 0, 1)
+        local easedAlpha = 1 - (1 - alpha) ^ 2
+        local newPosition = startPosition:Lerp(targetPosition, easedAlpha)
+        root.CFrame = CFrame.new(newPosition, newPosition + root.CFrame.LookVector)
+        if alpha >= 1 then
+            connection:Disconnect()
+            pressQ()
+            busy = false
+        end
+    end)
+end
+
+local function dashJump()
+    if busy then return end
+    busy = true
+    local character = getCharacter()
+    local root = getRootPart()
+    playDashAnimation(character)
+    if autoRotate then
+        root.CFrame = root.CFrame * CFrame.Angles(0, math.pi / 2, 0)
+        local camera = workspace.CurrentCamera
+        if camera then
+            camera.CFrame = camera.CFrame * CFrame.Angles(0, math.pi / 2, 0)
+        end
+        task.wait(0.05)
+    end
+    local startPosition = root.Position
+    local targetPosition = startPosition + root.CFrame.RightVector * JUMP_DASH_DISTANCE
+    local startTime = os.clock()
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not root or not root.Parent then
+            connection:Disconnect()
+            busy = false
+            return
+        end
+        local elapsed = os.clock() - startTime
+        local alpha = math.clamp(elapsed / JUMP_DASH_TIME, 0, 1)
+        local easedAlpha = 1 - (1 - alpha) ^ 2
+        local newPosition = startPosition:Lerp(targetPosition, easedAlpha)
+            + Vector3.new(0, math.sin(alpha * math.pi) * JUMP_HEIGHT, 0)
+        root.CFrame = CFrame.new(newPosition, newPosition + root.CFrame.LookVector)
+        if alpha >= 1 then
+            connection:Disconnect()
+            busy = false
+        end
+    end)
+end
+
+-- Keyboard controls
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.R then
+        dash()
+    elseif input.KeyCode == Enum.KeyCode.T then
+        dashJump()
+    end
 end)
 
-local _call127 = Instance.new('TextButton')
-_call127.Name = 'DashTButton'
-_call127.Size = UDim2.new(1, -16, 0, 28)
-_call127.Position = UDim2.new(0, 8, 0, 60)
-_call127.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-_call127.Text = 'Dash Jump (T)'
-_call127.TextColor3 = Color3.fromRGB(255, 255, 255)
-_call127.Font = Enum.Font.GothamMedium
-_call127.TextSize = 13
-_call127.AutoButtonColor = true
-_call127.Parent = _call24
-Instance.new('UICorner').Parent = _call127
-_call127.MouseButton1Click:Connect(function() end)
+-- GUI creation (unchanged)
+local function makeButton(parent, name, text, yPosition, callback)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Size = UDim2.new(1, -16, 0, 28)
+    button.Position = UDim2.new(0, 8, 0, yPosition)
+    button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamMedium
+    button.TextSize = 13
+    button.AutoButtonColor = true
+    button.Parent = parent
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = button
+    button.MouseButton1Click:Connect(callback)
+    return button
+end
 
-local _call147 = Instance.new('TextButton')
-_call147.Name = 'AutoRotateToggle'
-_call147.Size = UDim2.new(1, -16, 0, 28)
-_call147.Position = UDim2.new(0, 8, 0, 92)
-_call147.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-_call147.Text = 'Auto Rotate'
-_call147.TextColor3 = Color3.fromRGB(255, 255, 255)
-_call147.Font = Enum.Font.GothamMedium
-_call147.TextSize = 13
-_call147.AutoButtonColor = false
-_call147.Parent = _call24
-Instance.new('UICorner').Parent = _call147
+local function makeToggle(parent, name, text, yPosition)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Size = UDim2.new(1, -16, 0, 28)
+    button.Position = UDim2.new(0, 8, 0, yPosition)
+    button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamMedium
+    button.TextSize = 13
+    button.AutoButtonColor = false
+    button.Parent = parent
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = button
+    button.MouseButton1Click:Connect(function()
+        autoRotate = not autoRotate
+        if autoRotate then
+            button.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+        else
+            button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+        end
+    end)
+    return button
+end
 
-_call147.MouseButton1Click:Connect(function()
-    _call147.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
-end)
+local function makeDraggable(frame)
+    local dragging = false
+    local dragStart
+    local startPosition
+    local dragInput
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPosition = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
 
-_LocalPlayer10.CharacterAdded:Connect(function()
+local function createGui()
+    local playerGui = player:WaitForChild("PlayerGui")
+    local existing = playerGui:FindFirstChild("DashGui")
+    if existing then existing:Destroy() end
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "DashGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true
+    screenGui.Parent = playerGui
+    local container = Instance.new("Frame")
+    container.Name = "Container"
+    container.Size = UDim2.new(0, 140, 0, 125)
+    container.Position = UDim2.new(1, -160, 1, -145)
+    container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    container.BackgroundTransparency = 0.15
+    container.BorderSizePixel = 0
+    container.Active = true
+    container.Parent = screenGui
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = container
+    makeDraggable(container)
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, 0, 0, 20)
+    title.Position = UDim2.new(0, 0, 0, 4)
+    title.BackgroundTransparency = 1
+    title.Text = "DASH"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 14
+    title.Parent = container
+    makeButton(container, "DashRButton", "Dash (R)", 28, dash)
+    makeButton(container, "DashTButton", "Dash Jump (T)", 60, dashJump)
+    makeToggle(container, "AutoRotateToggle", "Auto Rotate", 92)
+    return screenGui
+end
+
+-- Initial GUI
+createGui()
+
+-- Recreate GUI after respawn
+player.CharacterAdded:Connect(function()
     task.wait(1)
-    _LocalPlayer10.PlayerGui:FindFirstChild('DashGui')
+    local playerGui = player:WaitForChild("PlayerGui")
+    if not playerGui:FindFirstChild("DashGui") then
+        createGui()
+    end
 end)
-
-print("🎮 Dash GUI loaded successfully!")
