@@ -16,7 +16,7 @@ return {
         ["KEY_1D_USER5"] = { owner = "user5", type = "1d", expires = 1787136000 },
 
         -- LIFETIME KEYS (5 Users)
-        ["LIFETIME_KEY_USER1"] = { owner = "user1", type = "lifetime" },
+        ["DUDE"] = { owner = "ClaysRetake", type = "lifetime" },
         ["LIFETIME_KEY_USER2"] = { owner = "user2", type = "lifetime" },
         ["LIFETIME_KEY_USER3"] = { owner = "user3", type = "lifetime" },
         ["LIFETIME_KEY_USER4"] = { owner = "user4", type = "lifetime" },
