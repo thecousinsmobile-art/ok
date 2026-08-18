@@ -1,4 +1,4 @@
--- dash_and_moveset_tabbed.lua
+-- dash.lua (Updated with fixed keybind assignment system)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -6,7 +6,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
 
--- Configurations & Keybinds (Custom moveset starts disabled)
+-- Configurations & Keybinds
 local config = {
     dashKey = Enum.KeyCode.R,
     dashJumpKey = Enum.KeyCode.T,
@@ -154,6 +154,18 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         dash()
     elseif input.KeyCode == config.dashJumpKey then
         dashJump()
+    elseif input.KeyCode == config.menuKey then
+        -- Toggles control panel via menu key
+        local playerGui = player:FindFirstChild("PlayerGui")
+        if playerGui then
+            local dashGui = playerGui:FindFirstChild("DashGui")
+            if dashGui then
+                local settingsMenu = dashGui:FindFirstChild("SettingsMenu")
+                if settingsMenu then
+                    settingsMenu.Visible = not settingsMenu.Visible
+                end
+            end
+        end
     end
 end)
 
@@ -169,7 +181,6 @@ local function playEmote(animationId)
         animator.Parent = humanoid
     end
 
-    -- Stop existing playing custom emote tracks if any
     for _, track in pairs(animator:GetPlayingAnimationTracks()) do
         if track.Animation.AnimationId == animationId then
             track:Stop()
@@ -395,29 +406,39 @@ local function createGui()
     tabEmotesBtn.MouseButton1Click:Connect(function() selectTab("Emotes") end)
     tabDashBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
 
-    -- Populate Dash Tab (Keybind Changers)
+    -- Populate Dash Tab (Fixed Keybind Changers)
+    local isListening = false
+    
     local dashKeyButton = makeButton(dashTabContent, "BindDash", "Dash Key: " .. config.dashKey.Name, UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 5), function()
+        if isListening then return end
+        isListening = true
         dashKeyButton.Text = "Press any key..."
-        local conn
-        conn = UserInputService.InputBegan:Connect(function(input)
+        
+        local connection
+        connection = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
                 config.dashKey = input.KeyCode
                 dashKeyButton.Text = "Dash Key: " .. config.dashKey.Name
                 dashBtnRef.Text = "Dash (" .. config.dashKey.Name .. ")"
-                conn:Disconnect()
+                isListening = false
+                connection:Disconnect()
             end
         end)
     end)
 
     local dashJumpKeyButton = makeButton(dashTabContent, "BindDashJump", "Jump Key: " .. config.dashJumpKey.Name, UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 45), function()
+        if isListening then return end
+        isListening = true
         dashJumpKeyButton.Text = "Press any key..."
-        local conn
-        conn = UserInputService.InputBegan:Connect(function(input)
+        
+        local connection
+        connection = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
                 config.dashJumpKey = input.KeyCode
                 dashJumpKeyButton.Text = "Jump Key: " .. config.dashJumpKey.Name
                 dashJumpBtnRef.Text = "Dash Jump (" .. config.dashJumpKey.Name .. ")"
-                conn:Disconnect()
+                isListening = false
+                connection:Disconnect()
             end
         end)
     end)
@@ -427,7 +448,7 @@ local function createGui()
         config.customMovesetEnabled = state
     end)
 
-    -- Populate Emotes Tab (Template setup for custom emotes once you provide IDs)
+    -- Populate Emotes Tab (Template setup for custom emotes)
     local sampleEmotes = {
         {name = "Emote 1", id = "rbxassetid://0000000000"},
         {name = "Emote 2", id = "rbxassetid://0000000000"},
@@ -445,13 +466,6 @@ local function createGui()
     -- Close Button
     makeButton(settingsFrame, "CloseMenu", "Close Menu", UDim2.new(1, -16, 0, 26), UDim2.new(0, 8, 0, 195), function()
         settingsFrame.Visible = false
-    end)
-
-    -- Toggle settings visibility via Menu Key
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if input.KeyCode == config.menuKey then
-            settingsFrame.Visible = not settingsFrame.Visible
-        end
     end)
 
     return screenGui
