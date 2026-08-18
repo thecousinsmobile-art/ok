@@ -1,4 +1,4 @@
--- Combined Script
+-- dash.lua
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -6,10 +6,11 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
 
--- DASH VARIABLES
 local DASH_ANIMATION_ID = "rbxassetid://10480793962"
+
 local DASH_DISTANCE = 28
 local DASH_TIME = 0.24
+
 local JUMP_DASH_DISTANCE = 52
 local JUMP_DASH_TIME = 0.65
 local JUMP_HEIGHT = 6
@@ -17,20 +18,6 @@ local JUMP_HEIGHT = 6
 local busy = false
 local autoRotate = false
 
--- MOVESET REPLACEMENT VARIABLES
-local movesetEnabled = false
-
-local moveSet = {
-    move2 = { animationId = "rbxassetid://10466974800" },
-    move3 = { animationId = "rbxassetid://10471336737" }
-}
-
-local replacementMoveset = {
-    move2 = { animationId = "rbxassetid://17799224866", startingTime = 0.56, endingTime = 8.37, speed = 1 },
-    move3 = { animationId = "rbxassetid://12309835105", startingTime = 0.3, endingTime = 2.2 }
-}
-
--- DASH FUNCTIONS
 local function getCharacter()
     local character = player.Character
     if not character then
@@ -155,103 +142,64 @@ local function dashJump()
     end)
 end
 
--- MOVESET REPLACEMENT FUNCTION
-local function replaceMoveAnimation(humanoid)
-    humanoid.AnimationPlayed:Connect(function(animation)
-        if not movesetEnabled then return end
-        
-        for moveName, moveData in pairs(moveSet) do
-            if animation.Animation.AnimationId == moveData.animationId then
-                print("Original move detected: " .. moveName)
-
-                local replacementAnimation = replacementMoveset[moveName]
-                if not replacementAnimation then return end
-
-                for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-                    track:Stop()
-                end
-
-                local anim = Instance.new("Animation")
-                anim.AnimationId = replacementAnimation.animationId
-                local animTrack = humanoid:LoadAnimation(anim)
-                
-                animTrack:Play()
-                animTrack.TimePosition = replacementAnimation.startingTime
-
-                if replacementAnimation.speed then
-                    animTrack:AdjustSpeed(replacementAnimation.speed)
-                end
-
-                local duration = replacementAnimation.endingTime - replacementAnimation.startingTime
-                local adjustedDuration = duration
-                if replacementAnimation.speed then
-                    adjustedDuration = duration / replacementAnimation.speed
-                end
-
-                if adjustedDuration > 60 then
-                    return
-                end
-
-                wait(adjustedDuration)
-                animTrack:Stop()
-                break
-            end
-        end
-    end)
-end
-
--- INITIALIZE MOVESET
-local function initializeMoveset()
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    if humanoid then
-        replaceMoveAnimation(humanoid)
-    end
-end
-
-initializeMoveset()
-
-player.CharacterAdded:Connect(function()
-    task.wait(1)
-    local character = player.Character
-    local humanoid = character:WaitForChild("Humanoid")
-    if humanoid then
-        replaceMoveAnimation(humanoid)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.R then
+        dash()
+    elseif input.KeyCode == Enum.KeyCode.T then
+        dashJump()
     end
 end)
 
--- HOTBAR RENAMING FUNCTION
-local function renameHotbar()
-    local hotbarFrame = player.PlayerGui:FindFirstChild("Hotbar") and 
-                        player.PlayerGui.Hotbar:FindFirstChild("Backpack") and 
-                        player.PlayerGui.Hotbar.Backpack:FindFirstChild("Hotbar")
-    
-    if not hotbarFrame then return end
-    
-    local toolTable = {
-        ["Consecutive Punches"] = "Fast Kicks",
-        ["Shove"] = "My Grasp"
-    }
-    
-    for i = 1, 9 do
-        local baseButton = hotbarFrame:FindFirstChild(tostring(i)) and hotbarFrame[tostring(i)].Base
-        if baseButton then
-            local oldName = baseButton.ToolName.Text
-            local newName = toolTable[oldName]
-            if newName and movesetEnabled then
-                baseButton.ToolName.Text = newName
-            elseif not movesetEnabled then
-                for original, replacement in pairs(toolTable) do
-                    if baseButton.ToolName.Text == replacement then
-                        baseButton.ToolName.Text = original
-                    end
-                end
-            end
-        end
-    end
+local function makeButton(parent, name, text, yPosition, callback)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Size = UDim2.new(1, -16, 0, 28)
+    button.Position = UDim2.new(0, 8, 0, yPosition)
+    button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamMedium
+    button.TextSize = 13
+    button.AutoButtonColor = true
+    button.Parent = parent
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = button
+
+    button.MouseButton1Click:Connect(callback)
+    return button
 end
 
--- GUI FUNCTIONS
+local function makeToggle(parent, name, text, yPosition)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Size = UDim2.new(1, -16, 0, 28)
+    button.Position = UDim2.new(0, 8, 0, yPosition)
+    button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamMedium
+    button.TextSize = 13
+    button.AutoButtonColor = false
+    button.Parent = parent
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = button
+
+    button.MouseButton1Click:Connect(function()
+        autoRotate = not autoRotate
+        if autoRotate then
+            button.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+        else
+            button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+        end
+    end)
+    return button
+end
+
 local function makeDraggable(frame)
     local dragging = false
     local dragStart, startPosition, dragInput
@@ -289,19 +237,19 @@ end
 
 local function createGui()
     local playerGui = player:WaitForChild("PlayerGui")
-    local existing = playerGui:FindFirstChild("MovesetDashGui")
+    local existing = playerGui:FindFirstChild("DashGui")
     if existing then existing:Destroy() end
 
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "MovesetDashGui"
+    screenGui.Name = "DashGui"
     screenGui.ResetOnSpawn = false
     screenGui.IgnoreGuiInset = true
     screenGui.Parent = playerGui
 
     local container = Instance.new("Frame")
     container.Name = "Container"
-    container.Size = UDim2.new(0, 160, 0, 200)
-    container.Position = UDim2.new(1, -180, 1, -220)
+    container.Size = UDim2.new(0, 140, 0, 125)
+    container.Position = UDim2.new(1, -160, 1, -145)
     container.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     container.BackgroundTransparency = 0.15
     container.BorderSizePixel = 0
@@ -319,105 +267,25 @@ local function createGui()
     title.Size = UDim2.new(1, 0, 0, 20)
     title.Position = UDim2.new(0, 0, 0, 4)
     title.BackgroundTransparency = 1
-    title.Text = "MOVESET + DASH"
+    title.Text = "DASH"
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.Font = Enum.Font.GothamBold
     title.TextSize = 14
     title.Parent = container
 
-    local function makeButton(parent, name, text, yPosition, callback)
-        local button = Instance.new("TextButton")
-        button.Name = name
-        button.Size = UDim2.new(1, -16, 0, 28)
-        button.Position = UDim2.new(0, 8, 0, yPosition)
-        button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-        button.Text = text
-        button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        button.Font = Enum.Font.GothamMedium
-        button.TextSize = 13
-        button.AutoButtonColor = true
-        button.Parent = parent
-
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 6)
-        corner.Parent = button
-
-        button.MouseButton1Click:Connect(callback)
-        return button
-    end
-
-    local function makeToggle(parent, name, text, yPosition, isEnabled)
-        local button = Instance.new("TextButton")
-        button.Name = name
-        button.Size = UDim2.new(1, -16, 0, 28)
-        button.Position = UDim2.new(0, 8, 0, yPosition)
-        button.BackgroundColor3 = isEnabled and Color3.fromRGB(60, 120, 60) or Color3.fromRGB(45, 45, 55)
-        button.Text = text
-        button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        button.Font = Enum.Font.GothamMedium
-        button.TextSize = 13
-        button.AutoButtonColor = false
-        button.Parent = parent
-
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 6)
-        corner.Parent = button
-
-        return button
-    end
-
-    -- Moveset Toggle Button
-    local movesetToggle = makeToggle(container, "MovesetToggle", "Moveset: OFF", 28, false)
-    movesetToggle.MouseButton1Click:Connect(function()
-        movesetEnabled = not movesetEnabled
-        if movesetEnabled then
-            movesetToggle.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
-            movesetToggle.Text = "Moveset: ON"
-        else
-            movesetToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-            movesetToggle.Text = "Moveset: OFF"
-        end
-        renameHotbar()
-    end)
-
-    -- Dash Buttons
-    makeButton(container, "DashRButton", "Dash (R)", 64, dash)
-    makeButton(container, "DashTButton", "Dash Jump (T)", 96, dashJump)
-
-    -- Auto Rotate Toggle
-    local rotateToggle = makeToggle(container, "AutoRotateToggle", "Auto Rotate: OFF", 128, false)
-    rotateToggle.MouseButton1Click:Connect(function()
-        autoRotate = not autoRotate
-        if autoRotate then
-            rotateToggle.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
-            rotateToggle.Text = "Auto Rotate: ON"
-        else
-            rotateToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-            rotateToggle.Text = "Auto Rotate: OFF"
-        end
-    end)
+    makeButton(container, "DashRButton", "Dash (R)", 28, dash)
+    makeButton(container, "DashTButton", "Dash Jump (T)", 60, dashJump)
+    makeToggle(container, "AutoRotateToggle", "Auto Rotate", 92)
 
     return screenGui
 end
 
--- CREATE GUI
 createGui()
 
--- RECREATE GUI ON RESPAWN
 player.CharacterAdded:Connect(function()
     task.wait(1)
     local playerGui = player:WaitForChild("PlayerGui")
-    if not playerGui:FindFirstChild("MovesetDashGui") then
+    if not playerGui:FindFirstChild("DashGui") then
         createGui()
-    end
-end)
-
--- KEYBINDS FOR DASH
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.R then
-        dash()
-    elseif input.KeyCode == Enum.KeyCode.T then
-        dashJump()
     end
 end)
