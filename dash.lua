@@ -1,4 +1,4 @@
--- dash_and_moveset.lua
+-- dash_and_moveset_tabbed.lua
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -157,12 +157,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- GUI Elements & Settings Menu Setup
-local function makeButton(parent, name, text, yPosition, callback)
+-- GUI Helpers & Setup
+local function makeButton(parent, name, text, size, position, callback)
     local button = Instance.new("TextButton")
     button.Name = name
-    button.Size = UDim2.new(1, -16, 0, 32)
-    button.Position = UDim2.new(0, 8, 0, yPosition)
+    button.Size = size
+    button.Position = position
     button.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -179,11 +179,11 @@ local function makeButton(parent, name, text, yPosition, callback)
     return button
 end
 
-local function makeToggle(parent, name, text, yPosition, initialState, callback)
+local function makeToggle(parent, name, text, size, position, initialState, callback)
     local button = Instance.new("TextButton")
     button.Name = name
-    button.Size = UDim2.new(1, -16, 0, 32)
-    button.Position = UDim2.new(0, 8, 0, yPosition)
+    button.Size = size
+    button.Position = position
     button.BackgroundColor3 = initialState and Color3.fromRGB(60, 120, 60) or Color3.fromRGB(40, 40, 50)
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -282,17 +282,18 @@ local function createGui()
     title.TextSize = 13
     title.Parent = container
 
-    makeButton(container, "DashRButton", "Dash (" .. config.dashKey.Name .. ")", 30, dash)
-    makeButton(container, "DashTButton", "Dash Jump (" .. config.dashJumpKey.Name .. ")", 65, dashJump)
-    makeToggle(container, "AutoRotateToggle", "Auto Rotate", 100, autoRotate, function(state)
+    local dashBtnRef = makeButton(container, "DashRButton", "Dash (" .. config.dashKey.Name .. ")", UDim2.new(1, -16, 0, 32), UDim2.new(0, 8, 0, 30), dash)
+    local dashJumpBtnRef = makeButton(container, "DashTButton", "Dash Jump (" .. config.dashJumpKey.Name .. ")", UDim2.new(1, -16, 0, 32), UDim2.new(0, 8, 0, 65), dashJump)
+    
+    makeToggle(container, "AutoRotateToggle", "Auto Rotate", UDim2.new(1, -16, 0, 32), UDim2.new(0, 8, 0, 100), autoRotate, function(state)
         autoRotate = state
     end)
 
-    -- Config / Settings Panel (Toggled via Ctrl)
+    -- Tabbed Control Panel (Toggled via Ctrl)
     local settingsFrame = Instance.new("Frame")
     settingsFrame.Name = "SettingsMenu"
-    settingsFrame.Size = UDim2.new(0, 220, 0, 210)
-    settingsFrame.Position = UDim2.new(0.5, -110, 0.5, -105)
+    settingsFrame.Size = UDim2.new(0, 260, 0, 220)
+    settingsFrame.Position = UDim2.new(0.5, -130, 0.5, -110)
     settingsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     settingsFrame.BackgroundTransparency = 0.05
     settingsFrame.BorderSizePixel = 0
@@ -307,45 +308,84 @@ local function createGui()
     makeDraggable(settingsFrame)
 
     local sTitle = Instance.new("TextLabel")
-    sTitle.Size = UDim2.new(1, 0, 0, 30)
+    sTitle.Size = UDim2.new(1, 0, 0, 25)
     sTitle.Position = UDim2.new(0, 0, 0, 5)
     sTitle.BackgroundTransparency = 1
     sTitle.Text = "CONTROL PANEL (CTRL)"
     sTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
     sTitle.Font = Enum.Font.GothamBold
-    sTitle.TextSize = 14
+    sTitle.TextSize = 13
     sTitle.Parent = settingsFrame
 
-    -- Keybind Bind Buttons
-    local dashKeyButton = makeButton(settingsFrame, "BindDash", "Dash Key: " .. config.dashKey.Name, 40, function()
+    -- Tabs Container
+    local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash Settings", UDim2.new(0.5, -10, 0, 26), UDim2.new(0, 6, 0, 35), function() end)
+    local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset Settings", UDim2.new(0.5, -10, 0, 26), UDim2.new(0.5, 4, 0, 35), function() end)
+
+    -- Content Frames for Tabs
+    local dashTabContent = Instance.new("Frame")
+    dashTabContent.Size = UDim2.new(1, -16, 0, 110)
+    dashTabContent.Position = UDim2.new(0, 8, 0, 70)
+    dashTabContent.BackgroundTransparency = 1
+    dashTabContent.Visible = true
+    dashTabContent.Parent = settingsFrame
+
+    local movesetTabContent = Instance.new("Frame")
+    movesetTabContent.Size = UDim2.new(1, -16, 0, 110)
+    movesetTabContent.Position = UDim2.new(0, 8, 0, 70)
+    movesetTabContent.BackgroundTransparency = 1
+    movesetTabContent.Visible = false
+    movesetTabContent.Parent = settingsFrame
+
+    -- Tab Switching Logic
+    tabDashBtn.MouseButton1Click:Connect(function()
+        dashTabContent.Visible = true
+        movesetTabContent.Visible = false
+        tabDashBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+        tabMovesetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    end)
+
+    tabMovesetBtn.MouseButton1Click:Connect(function()
+        dashTabContent.Visible = false
+        movesetTabContent.Visible = true
+        tabDashBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        tabMovesetBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+    end)
+    tabDashBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+
+    -- Populate Dash Tab (Keybind Changers)
+    local dashKeyButton = makeButton(dashTabContent, "BindDash", "Dash Key: " .. config.dashKey.Name, UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 5), function()
         dashKeyButton.Text = "Press any key..."
         local conn
         conn = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
                 config.dashKey = input.KeyCode
                 dashKeyButton.Text = "Dash Key: " .. config.dashKey.Name
+                dashBtnRef.Text = "Dash (" .. config.dashKey.Name .. ")"
                 conn:Disconnect()
             end
         end)
     end)
 
-    local dashJumpKeyButton = makeButton(settingsFrame, "BindDashJump", "Jump Key: " .. config.dashJumpKey.Name, 78, function()
+    local dashJumpKeyButton = makeButton(dashTabContent, "BindDashJump", "Jump Key: " .. config.dashJumpKey.Name, UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 45), function()
         dashJumpKeyButton.Text = "Press any key..."
         local conn
         conn = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
                 config.dashJumpKey = input.KeyCode
                 dashJumpKeyButton.Text = "Jump Key: " .. config.dashJumpKey.Name
+                dashJumpBtnRef.Text = "Dash Jump (" .. config.dashJumpKey.Name .. ")"
                 conn:Disconnect()
             end
         end)
     end)
 
-    makeToggle(settingsFrame, "CustomMovesetToggle", "Custom Moveset", 116, config.customMovesetEnabled, function(state)
+    -- Populate Moveset Tab (Toggle Custom Moveset)
+    makeToggle(movesetTabContent, "CustomMovesetToggle", "enable moveset custom", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), config.customMovesetEnabled, function(state)
         config.customMovesetEnabled = state
     end)
 
-    makeButton(settingsFrame, "CloseMenu", "Close Menu", 160, function()
+    -- Close Button
+    makeButton(settingsFrame, "CloseMenu", "Close Menu", UDim2.new(1, -16, 0, 26), UDim2.new(0, 8, 0, 185), function()
         settingsFrame.Visible = false
     end)
 
