@@ -6,12 +6,12 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
 
--- Configurations & Keybinds
+-- Configurations & Keybinds (Custom moveset starts disabled)
 local config = {
     dashKey = Enum.KeyCode.R,
     dashJumpKey = Enum.KeyCode.T,
     menuKey = Enum.KeyCode.LeftControl,
-    customMovesetEnabled = true,
+    customMovesetEnabled = false,
 }
 
 local DASH_ANIMATION_ID = "rbxassetid://10480793962"
@@ -157,6 +157,39 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+-- Emote Player Function
+local function playEmote(animationId)
+    local character = getCharacter()
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = humanoid
+    end
+
+    -- Stop existing playing custom emote tracks if any
+    for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+        if track.Animation.AnimationId == animationId then
+            track:Stop()
+            return
+        end
+    end
+
+    local animation = Instance.new("Animation")
+    animation.AnimationId = animationId
+
+    local success, track = pcall(function()
+        return animator:LoadAnimation(animation)
+    end)
+    animation:Destroy()
+
+    if success and track then
+        track:Play()
+    end
+end
+
 -- GUI Helpers & Setup
 local function makeButton(parent, name, text, size, position, callback)
     local button = Instance.new("TextButton")
@@ -292,8 +325,8 @@ local function createGui()
     -- Tabbed Control Panel (Toggled via Ctrl)
     local settingsFrame = Instance.new("Frame")
     settingsFrame.Name = "SettingsMenu"
-    settingsFrame.Size = UDim2.new(0, 260, 0, 220)
-    settingsFrame.Position = UDim2.new(0.5, -130, 0.5, -110)
+    settingsFrame.Size = UDim2.new(0, 260, 0, 230)
+    settingsFrame.Position = UDim2.new(0.5, -130, 0.5, -115)
     settingsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     settingsFrame.BackgroundTransparency = 0.05
     settingsFrame.BorderSizePixel = 0
@@ -317,9 +350,10 @@ local function createGui()
     sTitle.TextSize = 13
     sTitle.Parent = settingsFrame
 
-    -- Tabs Container
-    local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash Settings", UDim2.new(0.5, -10, 0, 26), UDim2.new(0, 6, 0, 35), function() end)
-    local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset Settings", UDim2.new(0.5, -10, 0, 26), UDim2.new(0.5, 4, 0, 35), function() end)
+    -- Tabs Container (Dash, Moveset, Emotes)
+    local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash", UDim2.new(0.33, -6, 0, 26), UDim2.new(0, 4, 0, 35), function() end)
+    local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset", UDim2.new(0.33, -6, 0, 26), UDim2.new(0.33, 2, 0, 35), function() end)
+    local tabEmotesBtn = makeButton(settingsFrame, "TabEmotes", "Emotes", UDim2.new(0.33, -6, 0, 26), UDim2.new(0.66, 0, 0, 35), function() end)
 
     -- Content Frames for Tabs
     local dashTabContent = Instance.new("Frame")
@@ -336,20 +370,29 @@ local function createGui()
     movesetTabContent.Visible = false
     movesetTabContent.Parent = settingsFrame
 
-    -- Tab Switching Logic
-    tabDashBtn.MouseButton1Click:Connect(function()
-        dashTabContent.Visible = true
-        movesetTabContent.Visible = false
-        tabDashBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-        tabMovesetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    end)
+    local emotesTabContent = Instance.new("ScrollingFrame")
+    emotesTabContent.Size = UDim2.new(1, -16, 0, 110)
+    emotesTabContent.Position = UDim2.new(0, 8, 0, 70)
+    emotesTabContent.BackgroundTransparency = 1
+    emotesTabContent.Visible = false
+    emotesTabContent.CanvasSize = UDim2.new(0, 0, 0, 150)
+    emotesTabContent.ScrollBarThickness = 4
+    emotesTabContent.Parent = settingsFrame
 
-    tabMovesetBtn.MouseButton1Click:Connect(function()
-        dashTabContent.Visible = false
-        movesetTabContent.Visible = true
-        tabDashBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        tabMovesetBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-    end)
+    -- Tab Switching Logic
+    local function selectTab(activeTab)
+        dashTabContent.Visible = (activeTab == "Dash")
+        movesetTabContent.Visible = (activeTab == "Moveset")
+        emotesTabContent.Visible = (activeTab == "Emotes")
+
+        tabDashBtn.BackgroundColor3 = (activeTab == "Dash") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
+        tabMovesetBtn.BackgroundColor3 = (activeTab == "Moveset") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
+        tabEmotesBtn.BackgroundColor3 = (activeTab == "Emotes") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
+    end
+
+    tabDashBtn.MouseButton1Click:Connect(function() selectTab("Dash") end)
+    tabMovesetBtn.MouseButton1Click:Connect(function() selectTab("Moveset") end)
+    tabEmotesBtn.MouseButton1Click:Connect(function() selectTab("Emotes") end)
     tabDashBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
 
     -- Populate Dash Tab (Keybind Changers)
@@ -384,8 +427,23 @@ local function createGui()
         config.customMovesetEnabled = state
     end)
 
+    -- Populate Emotes Tab (Template setup for custom emotes once you provide IDs)
+    local sampleEmotes = {
+        {name = "Emote 1", id = "rbxassetid://0000000000"},
+        {name = "Emote 2", id = "rbxassetid://0000000000"},
+    }
+    
+    local yOffset = 0
+    for _, emote in ipairs(sampleEmotes) do
+        makeButton(emotesTabContent, "Emote_"..emote.name, emote.name, UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, yOffset), function()
+            playEmote(emote.id)
+        end)
+        yOffset = yOffset + 36
+    end
+    emotesTabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+
     -- Close Button
-    makeButton(settingsFrame, "CloseMenu", "Close Menu", UDim2.new(1, -16, 0, 26), UDim2.new(0, 8, 0, 185), function()
+    makeButton(settingsFrame, "CloseMenu", "Close Menu", UDim2.new(1, -16, 0, 26), UDim2.new(0, 8, 0, 195), function()
         settingsFrame.Visible = false
     end)
 
