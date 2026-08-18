@@ -241,7 +241,6 @@ local function renameHotbar()
             if newName and movesetEnabled then
                 baseButton.ToolName.Text = newName
             elseif not movesetEnabled then
-                -- Reset to original names when disabled
                 for original, replacement in pairs(toolTable) do
                     if baseButton.ToolName.Text == replacement then
                         baseButton.ToolName.Text = original
