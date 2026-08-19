@@ -1,8 +1,9 @@
--- dash.lua (Updated with fixed keybind assignment system)
+-- dash_and_visuals.lua
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 
@@ -12,6 +13,7 @@ local config = {
     dashJumpKey = Enum.KeyCode.T,
     menuKey = Enum.KeyCode.LeftControl,
     customMovesetEnabled = false,
+    visualsEnabled = false,
 }
 
 local DASH_ANIMATION_ID = "rbxassetid://10480793962"
@@ -155,7 +157,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     elseif input.KeyCode == config.dashJumpKey then
         dashJump()
     elseif input.KeyCode == config.menuKey then
-        -- Toggles control panel via menu key
         local playerGui = player:FindFirstChild("PlayerGui")
         if playerGui then
             local dashGui = playerGui:FindFirstChild("DashGui")
@@ -169,35 +170,283 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Emote Player Function
-local function playEmote(animationId)
-    local character = getCharacter()
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
+-- Visuals Module Controller (Snow, Dusk lighting, Crosshair)
+local visualsActive = false
+local visualConnections = {}
+local savedLighting = {}
 
-    local animator = humanoid:FindFirstChildOfClass("Animator")
-    if not animator then
-        animator = Instance.new("Animator")
-        animator.Parent = humanoid
+local function applyVisuals()
+    if visualsActive then return end
+    visualsActive = true
+
+    -- Save original lighting
+    savedLighting.ClockTime = Lighting.ClockTime
+    savedLighting.Brightness = Lighting.Brightness
+    savedLighting.Ambient = Lighting.Ambient
+    savedLighting.OutdoorAmbient = Lighting.OutdoorAmbient
+    savedLighting.GlobalShadows = Lighting.GlobalShadows
+    
+    local oldSky = Lighting:FindFirstChildOfClass("Sky")
+    savedLighting.Sky = oldSky and oldSky.SkyboxBk or nil
+
+    -- Apply Dusk/Twilight Lighting
+    Lighting.ClockTime = 18.5
+    Lighting.Brightness = 1.2
+    Lighting.Ambient = Color3.fromRGB(90, 100, 130)
+    Lighting.OutdoorAmbient = Color3.fromRGB(70, 80, 110)
+    Lighting.GlobalShadows = true
+
+    local sky = oldSky
+    if not sky then
+        sky = Instance.new("Sky")
+        sky.Parent = Lighting
+    end
+    sky.SkyboxBk = "rbxassetid://155359427"
+    sky.SkyboxDn = "rbxassetid://155359429"
+    sky.SkyboxFt = "rbxassetid://155359439"
+    sky.SkyboxLf = "rbxassetid://155359438"
+    sky.SkyboxRt = "rbxassetid://155359443"
+    sky.SkyboxUp = "rbxassetid://155359448"
+    sky.StarCount = 500
+
+    local playerGui = player:WaitForChild("PlayerGui")
+
+    -- Setup Screen GUI & Crosshair
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ClayV1Intro"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 999999
+    gui.Parent = playerGui
+
+    local container = Instance.new("Frame")
+    container.Name = "Container"
+    container.Size = UDim2.fromOffset(220, 220)
+    container.Position = UDim2.fromScale(0.5, 0.5)
+    container.AnchorPoint = Vector2.new(0.5, 0.5)
+    container.BackgroundTransparency = 1
+    container.Parent = gui
+
+    local crosshair = Instance.new("Frame")
+    crosshair.Name = "Crosshair"
+    crosshair.Size = UDim2.fromOffset(70, 70)
+    crosshair.Position = UDim2.fromScale(0.5, 0.5)
+    crosshair.AnchorPoint = Vector2.new(0.5, 0.5)
+    crosshair.BackgroundTransparency = 1
+    crosshair.Parent = container
+
+    local lines = {}
+    local LINE_LENGTH, LINE_WIDTH = 15, 2
+    for i = 1, 4 do
+        local glow = Instance.new("Frame")
+        glow.Size = UDim2.fromOffset(LINE_WIDTH + 8, LINE_LENGTH + 8)
+        glow.Position = UDim2.fromScale(0.5, 0.5)
+        glow.AnchorPoint = Vector2.new(0.5, 0.5)
+        glow.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        glow.BackgroundTransparency = 0.45
+        glow.BorderSizePixel = 0
+        glow.Parent = crosshair
+
+        local glowCorner = Instance.new("UICorner")
+        glowCorner.CornerRadius = UDim.new(1, 0)
+        glowCorner.Parent = glow
+
+        local line = Instance.new("Frame")
+        line.Size = UDim2.fromOffset(LINE_WIDTH, LINE_LENGTH)
+        line.Position = UDim2.fromScale(0.5, 0.5)
+        line.AnchorPoint = Vector2.new(0.5, 0.5)
+        line.BackgroundColor3 = Color3.fromRGB(255, 30, 30)
+        line.BorderSizePixel = 0
+        line.Parent = crosshair
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = line
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(255, 90, 90)
+        stroke.Thickness = 1
+        stroke.Transparency = 0
+        stroke.Parent = line
+
+        local angle = (i - 1) * 90
+        line.Rotation = angle
+        glow.Rotation = angle
+
+        table.insert(lines, {line = line, glow = glow, angle = angle})
     end
 
-    for _, track in pairs(animator:GetPlayingAnimationTracks()) do
-        if track.Animation.AnimationId == animationId then
-            track:Stop()
-            return
+    local dotGlow = Instance.new("Frame")
+    dotGlow.Size = UDim2.fromOffset(6, 6)
+    dotGlow.Position = UDim2.fromScale(0.5, 0.5)
+    dotGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+    dotGlow.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    dotGlow.BackgroundTransparency = 0.25
+    dotGlow.BorderSizePixel = 0
+    dotGlow.Parent = crosshair
+
+    local dotGlowCorner = Instance.new("UICorner")
+    dotGlowCorner.CornerRadius = UDim.new(1, 0)
+    dotGlowCorner.Parent = dotGlow
+
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.fromOffset(2, 2)
+    dot.Position = UDim2.fromScale(0.5, 0.5)
+    dot.AnchorPoint = Vector2.new(0.5, 0.5)
+    dot.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    dot.BorderSizePixel = 0
+    dot.Parent = crosshair
+
+    local dotCorner = Instance.new("UICorner")
+    dotCorner.CornerRadius = UDim.new(1, 0)
+    dotCorner.Parent = dot
+
+    local textGlow = Instance.new("TextLabel")
+    textGlow.Size = UDim2.fromOffset(180, 35)
+    textGlow.Position = UDim2.new(0.5, 0, 0.5, 52)
+    textGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+    textGlow.BackgroundTransparency = 1
+    textGlow.Text = "clayv1"
+    textGlow.TextColor3 = Color3.fromRGB(255, 0, 0)
+    textGlow.TextSize = 16
+    textGlow.Font = Enum.Font.GothamBold
+    textGlow.TextTransparency = 0.2
+    textGlow.TextStrokeColor3 = Color3.fromRGB(255, 0, 0)
+    textGlow.TextStrokeTransparency = 0
+    textGlow.ZIndex = 2
+    textGlow.Parent = container
+
+    local nameText = Instance.new("TextLabel")
+    nameText.Size = UDim2.fromOffset(180, 35)
+    nameText.Position = UDim2.new(0.5, 0, 0.5, 52)
+    nameText.AnchorPoint = Vector2.new(0.5, 0.5)
+    nameText.BackgroundTransparency = 1
+    nameText.Text = "clayv1"
+    nameText.TextColor3 = Color3.fromRGB(255, 65, 65)
+    nameText.TextSize = 16
+    nameText.Font = Enum.Font.GothamBold
+    nameText.TextStrokeColor3 = Color3.fromRGB(75, 0, 0)
+    nameText.TextStrokeTransparency = 0
+    nameText.TextTransparency = 0
+    nameText.ZIndex = 3
+    nameText.Parent = container
+
+    -- Setup Snow Part
+    local snowPart = Instance.new("Part")
+    snowPart.Name = "ClayV1Snow"
+    snowPart.Size = Vector3.new(200, 1, 200)
+    snowPart.Anchored = true
+    snowPart.CanCollide = false
+    snowPart.CanTouch = false
+    snowPart.CanQuery = false
+    snowPart.Transparency = 1
+    snowPart.CastShadow = false
+    snowPart.Parent = workspace
+
+    local snow = Instance.new("ParticleEmitter")
+    snow.Name = "RealSnow"
+    snow.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    snow.Rate = 350
+    snow.Lifetime = NumberRange.new(5, 8)
+    snow.Speed = NumberRange.new(8, 14)
+    snow.Acceleration = Vector3.new(2, -8, 1)
+    snow.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.20),
+        NumberSequenceKeypoint.new(0.25, 0.40),
+        NumberSequenceKeypoint.new(0.7, 0.35),
+        NumberSequenceKeypoint.new(1, 0.15)
+    })
+    snow.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+    snow.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.2),
+        NumberSequenceKeypoint.new(0.15, 0),
+        NumberSequenceKeypoint.new(0.75, 0.05),
+        NumberSequenceKeypoint.new(1, 0.45)
+    })
+    snow.Rotation = NumberRange.new(0, 360)
+    snow.RotSpeed = NumberRange.new(-60, 60)
+    snow.Shape = Enum.ParticleEmitterShape.Box
+    snow.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+    snow.EmissionDirection = Enum.NormalId.Bottom
+    snow.SpreadAngle = Vector2.new(15, 15)
+    snow.LightEmission = 0.4
+    snow.LightInfluence = 0
+    snow.Enabled = true
+    snow.Parent = snowPart
+
+    local elapsed = 0
+    local rotation = 0
+    local MIN_DISTANCE, MAX_DISTANCE = 13, 21
+
+    table.insert(visualConnections, RunService.RenderStepped:Connect(function(dt)
+        elapsed += dt
+        if UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter then
+            UserInputService.MouseIconEnabled = false
+        else
+            UserInputService.MouseIconEnabled = true
         end
+
+        rotation += 110 * dt
+        crosshair.Rotation = rotation
+
+        local pulse = (math.sin(elapsed * 4) + 1) / 2
+        local distance = MIN_DISTANCE + (pulse * (MAX_DISTANCE - MIN_DISTANCE))
+
+        for _, data in ipairs(lines) do
+            local angle = math.rad(data.angle)
+            local x = math.sin(angle) * distance
+            local y = -math.cos(angle) * distance
+            data.line.Position = UDim2.new(0.5, x, 0.5, y)
+            data.glow.Position = UDim2.new(0.5, x, 0.5, y)
+            data.glow.BackgroundTransparency = 0.72 - (pulse * 0.3)
+        end
+
+        local dotSize = 5 + (pulse * 2)
+        dotGlow.Size = UDim2.fromOffset(dotSize, dotSize)
+        dotGlow.BackgroundTransparency = 0.4 - (pulse * 0.15)
+    end))
+
+    table.insert(visualConnections, RunService.RenderStepped:Connect(function()
+        local camera = workspace.CurrentCamera
+        if camera then
+            snowPart.Position = camera.CFrame.Position + Vector3.new(0, 35, 0)
+        end
+    end))
+end
+
+local function disableVisuals()
+    if not visualsActive then return end
+    visualsActive = false
+
+    for _, conn in ipairs(visualConnections) do
+        conn:Disconnect()
+    end
+    visualConnections = {}
+
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if playerGui then
+        local gui = playerGui:FindFirstChild("ClayV1Intro")
+        if gui then gui:Destroy() end
     end
 
-    local animation = Instance.new("Animation")
-    animation.AnimationId = animationId
+    local snowPart = workspace:FindFirstChild("ClayV1Snow")
+    if snowPart then snowPart:Destroy() end
 
-    local success, track = pcall(function()
-        return animator:LoadAnimation(animation)
-    end)
-    animation:Destroy()
-
-    if success and track then
-        track:Play()
+    -- Restore Lighting
+    if savedLighting.ClockTime then
+        Lighting.ClockTime = savedLighting.ClockTime
+        Lighting.Brightness = savedLighting.Brightness
+        Lighting.Ambient = savedLighting.Ambient
+        Lighting.OutdoorAmbient = savedLighting.OutdoorAmbient
+        Lighting.GlobalShadows = savedLighting.GlobalShadows
+        local sky = Lighting:FindFirstChildOfClass("Sky")
+        if sky then
+            if savedLighting.Sky then
+                sky.SkyboxBk = savedLighting.Sky
+            else
+                sky:Destroy()
+            end
+        end
     end
 end
 
@@ -361,10 +610,10 @@ local function createGui()
     sTitle.TextSize = 13
     sTitle.Parent = settingsFrame
 
-    -- Tabs Container (Dash, Moveset, Emotes)
+    -- Tabs Container (Dash, Moveset, Visuals)
     local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash", UDim2.new(0.33, -6, 0, 26), UDim2.new(0, 4, 0, 35), function() end)
     local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset", UDim2.new(0.33, -6, 0, 26), UDim2.new(0.33, 2, 0, 35), function() end)
-    local tabEmotesBtn = makeButton(settingsFrame, "TabEmotes", "Emotes", UDim2.new(0.33, -6, 0, 26), UDim2.new(0.66, 0, 0, 35), function() end)
+    local tabVisualsBtn = makeButton(settingsFrame, "TabVisuals", "Visuals", UDim2.new(0.33, -6, 0, 26), UDim2.new(0.66, 0, 0, 35), function() end)
 
     -- Content Frames for Tabs
     local dashTabContent = Instance.new("Frame")
@@ -381,29 +630,27 @@ local function createGui()
     movesetTabContent.Visible = false
     movesetTabContent.Parent = settingsFrame
 
-    local emotesTabContent = Instance.new("ScrollingFrame")
-    emotesTabContent.Size = UDim2.new(1, -16, 0, 110)
-    emotesTabContent.Position = UDim2.new(0, 8, 0, 70)
-    emotesTabContent.BackgroundTransparency = 1
-    emotesTabContent.Visible = false
-    emotesTabContent.CanvasSize = UDim2.new(0, 0, 0, 150)
-    emotesTabContent.ScrollBarThickness = 4
-    emotesTabContent.Parent = settingsFrame
+    local visualsTabContent = Instance.new("Frame")
+    visualsTabContent.Size = UDim2.new(1, -16, 0, 110)
+    visualsTabContent.Position = UDim2.new(0, 8, 0, 70)
+    visualsTabContent.BackgroundTransparency = 1
+    visualsTabContent.Visible = false
+    visualsTabContent.Parent = settingsFrame
 
     -- Tab Switching Logic
     local function selectTab(activeTab)
         dashTabContent.Visible = (activeTab == "Dash")
         movesetTabContent.Visible = (activeTab == "Moveset")
-        emotesTabContent.Visible = (activeTab == "Emotes")
+        visualsTabContent.Visible = (activeTab == "Visuals")
 
         tabDashBtn.BackgroundColor3 = (activeTab == "Dash") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
         tabMovesetBtn.BackgroundColor3 = (activeTab == "Moveset") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
-        tabEmotesBtn.BackgroundColor3 = (activeTab == "Emotes") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
+        tabVisualsBtn.BackgroundColor3 = (activeTab == "Visuals") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
     end
 
     tabDashBtn.MouseButton1Click:Connect(function() selectTab("Dash") end)
     tabMovesetBtn.MouseButton1Click:Connect(function() selectTab("Moveset") end)
-    tabEmotesBtn.MouseButton1Click:Connect(function() selectTab("Emotes") end)
+    tabVisualsBtn.MouseButton1Click:Connect(function() selectTab("Visuals") end)
     tabDashBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
 
     -- Populate Dash Tab (Fixed Keybind Changers)
@@ -443,25 +690,19 @@ local function createGui()
         end)
     end)
 
-    -- Populate Moveset Tab (Toggle Custom Moveset)
+    -- Populate Moveset Tab (Toggle Custom Moveset - Disabled by default)
     makeToggle(movesetTabContent, "CustomMovesetToggle", "enable moveset custom", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), config.customMovesetEnabled, function(state)
         config.customMovesetEnabled = state
     end)
 
-    -- Populate Emotes Tab (Template setup for custom emotes)
-    local sampleEmotes = {
-        {name = "Emote 1", id = "rbxassetid://0000000000"},
-        {name = "Emote 2", id = "rbxassetid://0000000000"},
-    }
-    
-    local yOffset = 0
-    for _, emote in ipairs(sampleEmotes) do
-        makeButton(emotesTabContent, "Emote_"..emote.name, emote.name, UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, yOffset), function()
-            playEmote(emote.id)
-        end)
-        yOffset = yOffset + 36
-    end
-    emotesTabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+    -- Populate Visuals Tab
+    makeToggle(visualsTabContent, "VisualsToggle", "ClayV1 Visuals (Snow/Dusk/Crosshair)", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), visualsActive, function(state)
+        if state then
+            applyVisuals()
+        else
+            disableVisuals()
+        end
+    end)
 
     -- Close Button
     makeButton(settingsFrame, "CloseMenu", "Close Menu", UDim2.new(1, -16, 0, 26), UDim2.new(0, 8, 0, 195), function()
