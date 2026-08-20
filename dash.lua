@@ -1,4 +1,4 @@
--- dash_and_visuals_split.lua (Updated with Enhanced Detection)
+-- dash_and_visuals_split.lua (Owner Tab Removed & Bidirectional Tagging)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -29,7 +29,7 @@ local JUMP_HEIGHT = 6
 local busy = false
 local autoRotate = false
 
--- Networking Setup for detecting other ClayV1 users (You and your friend)
+-- Networking Setup for bidirectional detection (You & your friend can see each other)
 local commsFolder = ReplicatedStorage:FindFirstChild("ClayV1Comms")
 if not commsFolder then
     commsFolder = Instance.new("Folder")
@@ -472,7 +472,7 @@ local function updateCrosshair()
     end
 end
 
--- 4. Fellow ClayV1 User Tag Manager (Displays "fellow clayv1 user" above your friend's head automatically)
+-- 4. Bidirectional Tag Manager (Shows "fellow clayv1 user" to and from anyone running the script)
 local function setupTagsModule()
     RunService.RenderStepped:Connect(function()
         for _, p in ipairs(Players:GetPlayers()) do
@@ -650,7 +650,7 @@ local function createGui()
         autoRotate = state
     end)
 
-    -- Tabbed Control Panel (Toggled via Ctrl)
+    -- Tabbed Control Panel (Toggled via Ctrl) - Reduced to 3 tabs (Dash, Moveset, Visuals)
     local settingsFrame = Instance.new("Frame")
     settingsFrame.Name = "SettingsMenu"
     settingsFrame.Size = UDim2.new(0, 260, 0, 230)
@@ -678,11 +678,10 @@ local function createGui()
     sTitle.TextSize = 13
     sTitle.Parent = settingsFrame
 
-    -- Tabs Container (Dash, Moveset, Visuals, Owner)
-    local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash", UDim2.new(0.24, -4, 0, 26), UDim2.new(0, 4, 0, 35), function() end)
-    local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset", UDim2.new(0.24, -4, 0, 26), UDim2.new(0.25, 2, 0, 35), function() end)
-    local tabVisualsBtn = makeButton(settingsFrame, "TabVisuals", "Visuals", UDim2.new(0.24, -4, 0, 26), UDim2.new(0.50, 0, 0, 35), function() end)
-    local tabOwnerBtn = makeButton(settingsFrame, "TabOwner", "Owner", UDim2.new(0.24, -4, 0, 26), UDim2.new(0.75, -2, 0, 35), function() end)
+    -- Tabs Container (Dash, Moveset, Visuals) resized to 3 buttons evenly
+    local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash", UDim2.new(0.32, -4, 0, 26), UDim2.new(0, 6, 0, 35), function() end)
+    local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset", UDim2.new(0.32, -4, 0, 26), UDim2.new(0.34, 0, 0, 35), function() end)
+    local tabVisualsBtn = makeButton(settingsFrame, "TabVisuals", "Visuals", UDim2.new(0.32, -4, 0, 26), UDim2.new(0.68, -6, 0, 35), function() end)
 
     -- Content Frames for Tabs
     local dashTabContent = Instance.new("Frame")
@@ -708,32 +707,20 @@ local function createGui()
     visualsTabContent.ScrollBarThickness = 4
     visualsTabContent.Parent = settingsFrame
 
-    local ownerTabContent = Instance.new("ScrollingFrame")
-    ownerTabContent.Size = UDim2.new(1, -16, 0, 110)
-    ownerTabContent.Position = UDim2.new(0, 8, 0, 70)
-    ownerTabContent.BackgroundTransparency = 1
-    ownerTabContent.Visible = false
-    ownerTabContent.CanvasSize = UDim2.new(0, 0, 0, 150)
-    ownerTabContent.ScrollBarThickness = 4
-    ownerTabContent.Parent = settingsFrame
-
     -- Tab Switching Logic
     local function selectTab(activeTab)
         dashTabContent.Visible = (activeTab == "Dash")
         movesetTabContent.Visible = (activeTab == "Moveset")
         visualsTabContent.Visible = (activeTab == "Visuals")
-        ownerTabContent.Visible = (activeTab == "Owner")
 
         tabDashBtn.BackgroundColor3 = (activeTab == "Dash") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
         tabMovesetBtn.BackgroundColor3 = (activeTab == "Moveset") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
         tabVisualsBtn.BackgroundColor3 = (activeTab == "Visuals") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
-        tabOwnerBtn.BackgroundColor3 = (activeTab == "Owner") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
     end
 
     tabDashBtn.MouseButton1Click:Connect(function() selectTab("Dash") end)
     tabMovesetBtn.MouseButton1Click:Connect(function() selectTab("Moveset") end)
     tabVisualsBtn.MouseButton1Click:Connect(function() selectTab("Visuals") end)
-    tabOwnerBtn.MouseButton1Click:Connect(function() selectTab("Owner") end)
     tabDashBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
 
     -- Populate Dash Tab
@@ -792,45 +779,6 @@ local function createGui()
     makeToggle(visualsTabContent, "CrosshairToggle", "Enable Crosshair & Text", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 72), config.crosshairEnabled, function(state)
         config.crosshairEnabled = state
         updateCrosshair()
-    end)
-
-    -- Populate Owner Tab Features
-    makeButton(ownerTabContent, "OwnerRespawn", "Respawn Character", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 0), function()
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.Health = 0
-            end
-        end
-    end)
-
-    makeButton(ownerTabContent, "OwnerSpeedBoost", "Toggle Speed Boost (Walk)", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 36), function()
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                if humanoid.WalkSpeed == 16 then
-                    humanoid.WalkSpeed = 32
-                else
-                    humanoid.WalkSpeed = 16
-                end
-            end
-        end
-    end)
-
-    makeButton(ownerTabContent, "OwnerFullBright", "Toggle Fullbright", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 72), function()
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 12
-        Lighting.GlobalShadows = not Lighting.GlobalShadows
-    end)
-
-    makeButton(ownerTabContent, "OwnerServerHop", "Copy Server Hop Script", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 108), function()
-        pcall(function()
-            if setclipboard then
-                setclipboard('local TeleportService = game:GetService("TeleportService"); local Players = game:GetService("Players"); TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)')
-            end
-        end)
     end)
 
     -- Close Button
