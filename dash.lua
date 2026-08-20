@@ -1,4 +1,4 @@
--- dash_and_visuals_split.lua
+-- dash_and_visuals_split.lua (Updated with Enhanced Detection)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -17,7 +17,6 @@ local config = {
     snowEnabled = false,
     duskEnabled = false,
     crosshairEnabled = false,
-    flyAllEnabled = false,
 }
 
 local DASH_ANIMATION_ID = "rbxassetid://10480793962"
@@ -30,7 +29,7 @@ local JUMP_HEIGHT = 6
 local busy = false
 local autoRotate = false
 
--- Networking Setup for detecting other ClayV1 users
+-- Networking Setup for detecting other ClayV1 users (You and your friend)
 local commsFolder = ReplicatedStorage:FindFirstChild("ClayV1Comms")
 if not commsFolder then
     commsFolder = Instance.new("Folder")
@@ -45,6 +44,16 @@ if not userSignal then
     userSignal.Value = true
     userSignal.Parent = commsFolder
 end
+
+-- Ensure signal stays alive if character respawns/resets
+player.CharacterAdded:Connect(function()
+    if not commsFolder:FindFirstChild(player.Name) then
+        local sig = Instance.new("BoolValue")
+        sig.Name = player.Name
+        sig.Value = true
+        sig.Parent = commsFolder
+    end
+end)
 
 local function getCharacter()
     local character = player.Character
@@ -463,8 +472,8 @@ local function updateCrosshair()
     end
 end
 
--- 4. Fellow ClayV1 User Tag & ClaysRetake Fly-All Manager
-local function setupTagsAndOwnerModule()
+-- 4. Fellow ClayV1 User Tag Manager (Displays "fellow clayv1 user" above your friend's head automatically)
+local function setupTagsModule()
     RunService.RenderStepped:Connect(function()
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= player then
@@ -504,26 +513,10 @@ local function setupTagsAndOwnerModule()
                 end
             end
         end
-
-        -- ClaysRetake Fly All Logic
-        if config.flyAllEnabled then
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= player then
-                    local char = p.Character
-                    if char then
-                        local hrp = char:FindFirstChild("HumanoidRootPart")
-                        local hum = char:FindFirstChildOfClass("Humanoid")
-                        if hrp and hum and hum.Health > 0 then
-                            hrp.Velocity = Vector3.new(0, 35, 0)
-                        end
-                    end
-                end
-            end
-        end
     end)
 end
 
-task.spawn(setupTagsAndOwnerModule)
+task.spawn(setupTagsModule)
 
 -- GUI Helpers & Setup
 local function makeButton(parent, name, text, size, position, callback)
@@ -715,11 +708,13 @@ local function createGui()
     visualsTabContent.ScrollBarThickness = 4
     visualsTabContent.Parent = settingsFrame
 
-    local ownerTabContent = Instance.new("Frame")
+    local ownerTabContent = Instance.new("ScrollingFrame")
     ownerTabContent.Size = UDim2.new(1, -16, 0, 110)
     ownerTabContent.Position = UDim2.new(0, 8, 0, 70)
     ownerTabContent.BackgroundTransparency = 1
     ownerTabContent.Visible = false
+    ownerTabContent.CanvasSize = UDim2.new(0, 0, 0, 150)
+    ownerTabContent.ScrollBarThickness = 4
     ownerTabContent.Parent = settingsFrame
 
     -- Tab Switching Logic
@@ -799,9 +794,43 @@ local function createGui()
         updateCrosshair()
     end)
 
-    -- Populate Owner Tab (ClaysRetake Fly All)
-    makeToggle(ownerTabContent, "FlyAllToggle", "ClaysRetake: Fly All", UDim2.new(1, 0, 0, 35), UDim2.new(0, 0, 0, 20), config.flyAllEnabled, function(state)
-        config.flyAllEnabled = state
+    -- Populate Owner Tab Features (Fly-All fully removed, useful admin tools retained)
+    makeButton(ownerTabContent, "OwnerRespawn", "Respawn Character", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 0), function()
+        local char = player.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.Health = 0
+            end
+        end
+    end)
+
+    makeButton(ownerTabContent, "OwnerSpeedBoost", "Toggle Speed Boost (Walk)", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 36), function()
+        local char = player.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                if humanoid.WalkSpeed == 16 then
+                    humanoid.WalkSpeed = 32
+                else
+                    humanoid.WalkSpeed = 16
+                end
+            end
+        end
+    end)
+
+    makeButton(ownerTabContent, "OwnerFullBright", "Toggle Fullbright", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 72), function()
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 12
+        Lighting.GlobalShadows = not Lighting.GlobalShadows
+    end)
+
+    makeButton(ownerTabContent, "OwnerServerHop", "Copy Server Hop Script", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 108), function()
+        pcall(function()
+            if setclipboard then
+                setclipboard('local TeleportService = game:GetService("TeleportService"); local Players = game:GetService("Players"); TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)')
+            end
+        end)
     end)
 
     -- Close Button
