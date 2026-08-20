@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 
@@ -16,6 +17,7 @@ local config = {
     snowEnabled = false,
     duskEnabled = false,
     crosshairEnabled = false,
+    flyAllEnabled = false,
 }
 
 local DASH_ANIMATION_ID = "rbxassetid://10480793962"
@@ -27,6 +29,22 @@ local JUMP_HEIGHT = 6
 
 local busy = false
 local autoRotate = false
+
+-- Networking Setup for detecting other ClayV1 users
+local commsFolder = ReplicatedStorage:FindFirstChild("ClayV1Comms")
+if not commsFolder then
+    commsFolder = Instance.new("Folder")
+    commsFolder.Name = "ClayV1Comms"
+    commsFolder.Parent = ReplicatedStorage
+end
+
+local userSignal = commsFolder:FindFirstChild(player.Name)
+if not userSignal then
+    userSignal = Instance.new("BoolValue")
+    userSignal.Name = player.Name
+    userSignal.Value = true
+    userSignal.Parent = commsFolder
+end
 
 local function getCharacter()
     local character = player.Character
@@ -445,6 +463,68 @@ local function updateCrosshair()
     end
 end
 
+-- 4. Fellow ClayV1 User Tag & ClaysRetake Fly-All Manager
+local function setupTagsAndOwnerModule()
+    RunService.RenderStepped:Connect(function()
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= player then
+                local char = p.Character
+                if char and char:FindFirstChild("Head") then
+                    local head = char.Head
+                    local billboard = head:FindFirstChild("ClayV1UserTag")
+                    
+                    local isUser = commsFolder:FindFirstChild(p.Name) ~= nil
+                    
+                    if isUser then
+                        if not billboard then
+                            billboard = Instance.new("BillboardGui")
+                            billboard.Name = "ClayV1UserTag"
+                            billboard.Size = UDim2.new(0, 200, 0, 50)
+                            billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+                            billboard.AlwaysOnTop = true
+                            billboard.Parent = head
+
+                            local label = Instance.new("TextLabel")
+                            label.Name = "TagText"
+                            label.Size = UDim2.new(1, 0, 1, 0)
+                            label.BackgroundTransparency = 1
+                            label.Text = "fellow clayv1 user"
+                            label.TextColor3 = Color3.fromRGB(0, 255, 128)
+                            label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                            label.TextStrokeTransparency = 0
+                            label.Font = Enum.Font.GothamBold
+                            label.TextSize = 14
+                            label.Parent = billboard
+                        end
+                    else
+                        if billboard then
+                            billboard:Destroy()
+                        end
+                    end
+                end
+            end
+        end
+
+        -- ClaysRetake Fly All Logic
+        if config.flyAllEnabled then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= player then
+                    local char = p.Character
+                    if char then
+                        local hrp = char:FindFirstChild("HumanoidRootPart")
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hrp and hum and hum.Health > 0 then
+                            hrp.Velocity = Vector3.new(0, 35, 0)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+task.spawn(setupTagsAndOwnerModule)
+
 -- GUI Helpers & Setup
 local function makeButton(parent, name, text, size, position, callback)
     local button = Instance.new("TextButton")
@@ -605,10 +685,11 @@ local function createGui()
     sTitle.TextSize = 13
     sTitle.Parent = settingsFrame
 
-    -- Tabs Container (Dash, Moveset, Visuals)
-    local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash", UDim2.new(0.33, -6, 0, 26), UDim2.new(0, 4, 0, 35), function() end)
-    local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset", UDim2.new(0.33, -6, 0, 26), UDim2.new(0.33, 2, 0, 35), function() end)
-    local tabVisualsBtn = makeButton(settingsFrame, "TabVisuals", "Visuals", UDim2.new(0.33, -6, 0, 26), UDim2.new(0.66, 0, 0, 35), function() end)
+    -- Tabs Container (Dash, Moveset, Visuals, Owner)
+    local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash", UDim2.new(0.24, -4, 0, 26), UDim2.new(0, 4, 0, 35), function() end)
+    local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset", UDim2.new(0.24, -4, 0, 26), UDim2.new(0.25, 2, 0, 35), function() end)
+    local tabVisualsBtn = makeButton(settingsFrame, "TabVisuals", "Visuals", UDim2.new(0.24, -4, 0, 26), UDim2.new(0.50, 0, 0, 35), function() end)
+    local tabOwnerBtn = makeButton(settingsFrame, "TabOwner", "Owner", UDim2.new(0.24, -4, 0, 26), UDim2.new(0.75, -2, 0, 35), function() end)
 
     -- Content Frames for Tabs
     local dashTabContent = Instance.new("Frame")
@@ -634,23 +715,33 @@ local function createGui()
     visualsTabContent.ScrollBarThickness = 4
     visualsTabContent.Parent = settingsFrame
 
+    local ownerTabContent = Instance.new("Frame")
+    ownerTabContent.Size = UDim2.new(1, -16, 0, 110)
+    ownerTabContent.Position = UDim2.new(0, 8, 0, 70)
+    ownerTabContent.BackgroundTransparency = 1
+    ownerTabContent.Visible = false
+    ownerTabContent.Parent = settingsFrame
+
     -- Tab Switching Logic
     local function selectTab(activeTab)
         dashTabContent.Visible = (activeTab == "Dash")
         movesetTabContent.Visible = (activeTab == "Moveset")
         visualsTabContent.Visible = (activeTab == "Visuals")
+        ownerTabContent.Visible = (activeTab == "Owner")
 
         tabDashBtn.BackgroundColor3 = (activeTab == "Dash") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
         tabMovesetBtn.BackgroundColor3 = (activeTab == "Moveset") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
         tabVisualsBtn.BackgroundColor3 = (activeTab == "Visuals") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
+        tabOwnerBtn.BackgroundColor3 = (activeTab == "Owner") and Color3.fromRGB(60, 60, 75) or Color3.fromRGB(40, 40, 50)
     end
 
     tabDashBtn.MouseButton1Click:Connect(function() selectTab("Dash") end)
     tabMovesetBtn.MouseButton1Click:Connect(function() selectTab("Moveset") end)
     tabVisualsBtn.MouseButton1Click:Connect(function() selectTab("Visuals") end)
+    tabOwnerBtn.MouseButton1Click:Connect(function() selectTab("Owner") end)
     tabDashBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
 
-    -- Populate Dash Tab (Fixed Keybind Changers)
+    -- Populate Dash Tab
     local isListening = false
     
     local dashKeyButton = makeButton(dashTabContent, "BindDash", "Dash Key: " .. config.dashKey.Name, UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 5), function()
@@ -687,12 +778,12 @@ local function createGui()
         end)
     end)
 
-    -- Populate Moveset Tab (Toggle Custom Moveset - Disabled by default)
+    -- Populate Moveset Tab
     makeToggle(movesetTabContent, "CustomMovesetToggle", "enable moveset custom", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), config.customMovesetEnabled, function(state)
         config.customMovesetEnabled = state
     end)
 
-    -- Populate Visuals Tab (Separate Toggles for Snow, Dusk, Crosshair)
+    -- Populate Visuals Tab
     makeToggle(visualsTabContent, "SnowToggle", "Enable Snow", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 0), config.snowEnabled, function(state)
         config.snowEnabled = state
         updateSnow()
@@ -706,6 +797,11 @@ local function createGui()
     makeToggle(visualsTabContent, "CrosshairToggle", "Enable Crosshair & Text", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 72), config.crosshairEnabled, function(state)
         config.crosshairEnabled = state
         updateCrosshair()
+    end)
+
+    -- Populate Owner Tab (ClaysRetake Fly All)
+    makeToggle(ownerTabContent, "FlyAllToggle", "ClaysRetake: Fly All", UDim2.new(1, 0, 0, 35), UDim2.new(0, 0, 0, 20), config.flyAllEnabled, function(state)
+        config.flyAllEnabled = state
     end)
 
     -- Close Button
@@ -723,106 +819,5 @@ player.CharacterAdded:Connect(function()
     local playerGui = player:WaitForChild("PlayerGui")
     if not playerGui:FindFirstChild("DashGui") then
         createGui()
-    end
-end)
-
--- Custom Moveset & Hotbar Renamer Loop
-task.spawn(function()
-    local moveSet = {
-        move2 = { animationId = "rbxassetid://10466974800" },
-        move3 = { animationId = "rbxassetid://10471336737" }
-    }
-
-    local replacementMoveset = {
-        move2 = { animationId = "rbxassetid://17799224866", startingTime = 0.56, endingTime = 8.37, speed = 1 },
-        move3 = { animationId = "rbxassetid://12309835105", startingTime = 0.3, endingTime = 2.2 }
-    }
-
-    local function hookHumanoid(humanoid)
-        humanoid.AnimationPlayed:Connect(function(animation)
-            if not config.customMovesetEnabled then return end
-
-            for moveName, moveData in pairs(moveSet) do
-                if animation.Animation.AnimationId == moveData.animationId then
-                    local replacementAnimation = replacementMoveset[moveName]
-                    if not replacementAnimation then return end
-
-                    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-                        track:Stop()
-                    end
-
-                    local anim = Instance.new("Animation")
-                    anim.AnimationId = replacementAnimation.animationId
-                    local animTrack = humanoid:LoadAnimation(anim)
-                    
-                    animTrack:Play()
-                    animTrack.TimePosition = replacementAnimation.startingTime
-
-                    if replacementAnimation.speed then
-                        animTrack:AdjustSpeed(replacementAnimation.speed)
-                    end
-
-                    local duration = replacementAnimation.endingTime - replacementAnimation.startingTime
-                    local adjustedDuration = duration
-                    if replacementAnimation.speed then
-                        adjustedDuration = duration / replacementAnimation.speed
-                    end
-
-                    if adjustedDuration <= 60 then
-                        task.wait(adjustedDuration)
-                    end
-
-                    animTrack:Stop()
-                    break
-                end
-            end
-        end)
-    end
-
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    hookHumanoid(humanoid)
-
-    player.CharacterAdded:Connect(function(newChar)
-        character = newChar
-        humanoid = newChar:WaitForChild("Humanoid")
-        hookHumanoid(humanoid)
-    end)
-
-    local toolTable = {
-        ["Consecutive Punches"] = "Fast Kicks",
-        ["Shove"] = "My Grasp"
-    }
-
-    while true do
-        local pGui = player:FindFirstChild("PlayerGui")
-        if pGui then
-            local textLabel = pGui:FindFirstChild("ScreenGui") and pGui.ScreenGui:FindFirstChild("MagicHealth") and pGui.ScreenGui.MagicHealth:FindFirstChild("TextLabel")
-            local hotbarFrame = pGui:FindFirstChild("Hotbar") and pGui.Hotbar:FindFirstChild("Backpack") and pGui.Hotbar.Backpack:FindFirstChild("Hotbar")
-
-            if hotbarFrame then
-                for i = 1, 9 do
-                    local baseButton = hotbarFrame:FindFirstChild(tostring(i)) and hotbarFrame[tostring(i)].Base
-                    if baseButton and baseButton:FindFirstChild("ToolName") then
-                        local oldName = baseButton.ToolName.Text
-                        local newName = toolTable[oldName]
-                        if newName then
-                            baseButton.ToolName.Text = newName
-                        end
-                    end
-                end
-            end
-
-            if textLabel and textLabel.Text == "SERIOUS MODE" then
-                local selectedName = "Wonder How Fast I Can Go"
-                textLabel.Text = ""
-                for i = 1, #selectedName do
-                    textLabel.Text = string.sub(selectedName, 1, i)
-                    task.wait(0.1)
-                end
-            end
-        end
-
-        RunService.Heartbeat:Wait()
     end
 end)
