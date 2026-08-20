@@ -794,7 +794,7 @@ local function createGui()
         updateCrosshair()
     end)
 
-    -- Populate Owner Tab Features (Fly-All fully removed, useful admin tools retained)
+    -- Populate Owner Tab Features
     makeButton(ownerTabContent, "OwnerRespawn", "Respawn Character", UDim2.new(1, -4, 0, 30), UDim2.new(0, 0, 0, 0), function()
         local char = player.Character
         if char then
