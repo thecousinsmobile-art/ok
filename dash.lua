@@ -1,4 +1,4 @@
--- dash_and_visuals_split.lua (Toggleable Moveset Added)
+-- dash_and_visuals_split.lua (Properly Deactivating Moveset Toggle)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -753,7 +753,7 @@ local function createGui()
         end)
     end)
 
-    -- Toggleable "moveset 1" Logic
+    -- Toggleable "moveset 1" Logic with strict teardown
     makeToggle(movesetTabContent, "CustomMovesetToggle", "moveset 1", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), config.customMovesetEnabled, function(state)
         config.customMovesetEnabled = state
         
@@ -775,6 +775,7 @@ local function createGui()
             end
 
             local function findGuiAndSetText()
+                if not config.customMovesetEnabled then return end
                 local screenGui = playerGui:FindFirstChild("ScreenGui")
                 if screenGui then
                     local magicHealthFrame = screenGui:FindFirstChild("MagicHealth")
@@ -809,6 +810,7 @@ local function createGui()
             end
 
             setupAnimationHook(10468665991, function(Humanoid)
+                if not config.customMovesetEnabled then return end
                 local AnimAnim = Instance.new("Animation")
                 AnimAnim.AnimationId = "rbxassetid://18896127525"
                 local Anim = Humanoid:LoadAnimation(AnimAnim)
@@ -832,6 +834,7 @@ local function createGui()
             end)
 
             setupAnimationHook(10466974800, function(Humanoid)
+                if not config.customMovesetEnabled then return end
                 local AnimAnim = Instance.new("Animation")
                 AnimAnim.AnimationId = "rbxassetid://15090141089"
                 local Anim = Humanoid:LoadAnimation(AnimAnim)
@@ -852,6 +855,7 @@ local function createGui()
             end)
 
             setupAnimationHook(10471336737, function(Humanoid)
+                if not config.customMovesetEnabled then return end
                 local AnimAnim = Instance.new("Animation")
                 AnimAnim.AnimationId = "rbxassetid://17838619895"
                 local Anim = Humanoid:LoadAnimation(AnimAnim)
@@ -863,6 +867,7 @@ local function createGui()
             end)
 
             setupAnimationHook(12510170988, function(Humanoid)
+                if not config.customMovesetEnabled then return end
                 local AnimAnim = Instance.new("Animation")
                 AnimAnim.AnimationId = "rbxassetid://18179181663"
                 local Anim = Humanoid:LoadAnimation(AnimAnim)
@@ -873,6 +878,7 @@ local function createGui()
             end)
 
             setupAnimationHook(11343318134, function(Humanoid)
+                if not config.customMovesetEnabled then return end
                 local AnimAnim = Instance.new("Animation")
                 AnimAnim.AnimationId = "rbxassetid://18450698238"
                 local Anim = Humanoid:LoadAnimation(AnimAnim)
@@ -889,7 +895,7 @@ local function createGui()
                 pcall(function() loadstring(game:HttpGet('https://pastebin.com/raw/JKBEpaQW'))() end)
             end)
         else
-            -- TURN OFF MOVESET 1 (Teardown Connections & Reset Labels)
+            -- TURN OFF MOVESET 1 (Strict Deactivation & Teardown)
             for _, conn in ipairs(movesetConnections) do
                 if typeof(conn) == "RBXScriptConnection" then
                     conn:Disconnect()
@@ -918,7 +924,26 @@ local function createGui()
                     if magicHealthFrame then
                         local textLabel = magicHealthFrame:FindFirstChild("TextLabel")
                         if textLabel then
-                            textLabel.Text = "" -- Reset or clear custom health display text
+                            textLabel.Text = ""
+                        end
+                    end
+                end
+            end
+
+            -- Stop any active custom animation tracks immediately upon turning off
+            local char = localPlayer.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    local animator = hum:FindFirstChildOfClass("Animator")
+                    if animator then
+                        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                            local id = track.Animation.AnimationId
+                            if id == "rbxassetid://18896127525" or id == "rbxassetid://15090141089" or 
+                               id == "rbxassetid://15957361339" or id == "rbxassetid://17838619895" or 
+                               id == "rbxassetid://18179181663" or id == "rbxassetid://18450698238" then
+                                track:Stop()
+                            end
                         end
                     end
                 end
