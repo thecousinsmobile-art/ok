@@ -1,4 +1,4 @@
--- dash_and_visuals_split.lua (Owner Tab Removed & Bidirectional Tagging)
+-- dash_and_visuals_split.lua (Updated with Moveset 1)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -13,7 +13,7 @@ local config = {
     dashKey = Enum.KeyCode.R,
     dashJumpKey = Enum.KeyCode.T,
     menuKey = Enum.KeyCode.LeftControl,
-    customMovesetEnabled = false,
+    moveset1Enabled = false,
     snowEnabled = false,
     duskEnabled = false,
     crosshairEnabled = false,
@@ -177,6 +177,44 @@ local function dashJump()
             busy = false
         end
     end)
+end
+
+-- Moveset 1 Implementation
+local function runMoveset1()
+    if not config.moveset1Enabled then return end
+
+    local char = player.Character
+    if not char then return end
+    local humanoid = char:WaitForChild("Humanoid")
+    local hero = char:GetAttribute("Character")
+
+    if hero == "Bald" then
+        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+            track:Stop()
+        end
+
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://103362214977039"
+        local track = humanoid:LoadAnimation(anim)
+        track:Play()
+        anim:Destroy()
+
+        local success, sound = pcall(function()
+            if not isfile("shinji_spwn1.mp3") then
+                writefile("shinji_spwn1.mp3", game:HttpGet("https://github.com/Kenjihin69/Kenjihin69/blob/main/Screen_Recording_20250122_221218_20250122_222024.mp3?raw=true"))
+            end
+            local snd = Instance.new("Sound")
+            snd.SoundId = (getcustomasset or getsynasset)("shinji_spwn1.mp3")
+            return snd
+        end)
+
+        if success and sound then
+            sound.Parent = workspace
+            sound.Volume = 4
+            sound.TimePosition = 0
+            sound:Play()
+        end
+    end
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -472,7 +510,7 @@ local function updateCrosshair()
     end
 end
 
--- 4. Bidirectional Tag Manager (Shows "fellow clayv1 user" to and from anyone running the script)
+-- 4. Bidirectional Tag Manager
 local function setupTagsModule()
     RunService.RenderStepped:Connect(function()
         for _, p in ipairs(Players:GetPlayers()) do
@@ -650,7 +688,7 @@ local function createGui()
         autoRotate = state
     end)
 
-    -- Tabbed Control Panel (Toggled via Ctrl) - Reduced to 3 tabs (Dash, Moveset, Visuals)
+    -- Tabbed Control Panel (Toggled via Ctrl)
     local settingsFrame = Instance.new("Frame")
     settingsFrame.Name = "SettingsMenu"
     settingsFrame.Size = UDim2.new(0, 260, 0, 230)
@@ -678,7 +716,7 @@ local function createGui()
     sTitle.TextSize = 13
     sTitle.Parent = settingsFrame
 
-    -- Tabs Container (Dash, Moveset, Visuals) resized to 3 buttons evenly
+    -- Tabs Container (Dash, Moveset, Visuals)
     local tabDashBtn = makeButton(settingsFrame, "TabDash", "Dash", UDim2.new(0.32, -4, 0, 26), UDim2.new(0, 6, 0, 35), function() end)
     local tabMovesetBtn = makeButton(settingsFrame, "TabMoveset", "Moveset", UDim2.new(0.32, -4, 0, 26), UDim2.new(0.34, 0, 0, 35), function() end)
     local tabVisualsBtn = makeButton(settingsFrame, "TabVisuals", "Visuals", UDim2.new(0.32, -4, 0, 26), UDim2.new(0.68, -6, 0, 35), function() end)
@@ -760,9 +798,12 @@ local function createGui()
         end)
     end)
 
-    -- Populate Moveset Tab
-    makeToggle(movesetTabContent, "CustomMovesetToggle", "enable moveset custom", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), config.customMovesetEnabled, function(state)
-        config.customMovesetEnabled = state
+    -- Populate Moveset Tab with Moveset 1
+    makeToggle(movesetTabContent, "Moveset1Toggle", "Moveset 1", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), config.moveset1Enabled, function(state)
+        config.moveset1Enabled = state
+        if state then
+            runMoveset1()
+        end
     end)
 
     -- Populate Visuals Tab
