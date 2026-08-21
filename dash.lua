@@ -1,4 +1,4 @@
--- dash_and_visuals_split.lua (Owner Tab Removed & Bidirectional Tagging)
+-- dash_and_visuals_split.lua (Toggleable Moveset Added)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -29,7 +29,10 @@ local JUMP_HEIGHT = 6
 local busy = false
 local autoRotate = false
 
--- Networking Setup for bidirectional detection (You & your friend can see each other)
+-- Storage for active moveset connections to allow clean teardown
+local movesetConnections = {}
+
+-- Networking Setup for bidirectional detection
 local commsFolder = ReplicatedStorage:FindFirstChild("ClayV1Comms")
 if not commsFolder then
     commsFolder = Instance.new("Folder")
@@ -45,7 +48,6 @@ if not userSignal then
     userSignal.Parent = commsFolder
 end
 
--- Ensure signal stays alive if character respawns/resets
 player.CharacterAdded:Connect(function()
     if not commsFolder:FindFirstChild(player.Name) then
         local sig = Instance.new("BoolValue")
@@ -200,8 +202,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 -- Visual Features Implementation
-
--- 1. Dusk Lighting Controller
 local savedLighting = {}
 local function updateDusk()
     if config.duskEnabled then
@@ -251,7 +251,6 @@ local function updateDusk()
     end
 end
 
--- 2. Snow Controller
 local snowConnection = nil
 local function updateSnow()
     local existingPart = workspace:FindFirstChild("ClayV1Snow")
@@ -310,7 +309,6 @@ local function updateSnow()
     end
 end
 
--- 3. Crosshair Controller
 local crosshairGuiConn = nil
 local function updateCrosshair()
     local playerGui = player:WaitForChild("PlayerGui")
@@ -472,7 +470,7 @@ local function updateCrosshair()
     end
 end
 
--- 4. Bidirectional Tag Manager
+-- Bidirectional Tag Manager
 local function setupTagsModule()
     RunService.RenderStepped:Connect(function()
         for _, p in ipairs(Players:GetPlayers()) do
@@ -481,7 +479,6 @@ local function setupTagsModule()
                 if char and char:FindFirstChild("Head") then
                     local head = char.Head
                     local billboard = head:FindFirstChild("ClayV1UserTag")
-                    
                     local isUser = commsFolder:FindFirstChild(p.Name) ~= nil
                     
                     if isUser then
@@ -756,29 +753,26 @@ local function createGui()
         end)
     end)
 
-    -- Populate Moveset Tab with "moveset 1" toggle
+    -- Toggleable "moveset 1" Logic
     makeToggle(movesetTabContent, "CustomMovesetToggle", "moveset 1", UDim2.new(1, 0, 0, 32), UDim2.new(0, 0, 0, 20), config.customMovesetEnabled, function(state)
         config.customMovesetEnabled = state
+        
         if state then
-            -- Moveset Code Execution
+            -- TURN ON MOVESET 1
             local localPlayer = game.Players.LocalPlayer
             local playerGui = localPlayer.PlayerGui
 
             local hotbar = playerGui:FindFirstChild("Hotbar")
-            local backpack = hotbar:FindFirstChild("Backpack")
-            local hotbarFrame = backpack:FindFirstChild("Hotbar")
-
-            local baseButton1 = hotbarFrame:FindFirstChild("1").Base
-            baseButton1.ToolName.Text = "Black Flash"
-
-            local baseButton2 = hotbarFrame:FindFirstChild("2").Base
-            baseButton2.ToolName.Text = "Divergent Barrage"
-
-            local baseButton3 = hotbarFrame:FindFirstChild("3").Base
-            baseButton3.ToolName.Text = "Manji Kick"
-
-            local baseButton4 = hotbarFrame:FindFirstChild("4").Base
-            baseButton4.ToolName.Text = "UpperKick"
+            if hotbar then
+                local backpack = hotbar:FindFirstChild("Backpack")
+                local hotbarFrame = backpack and backpack:FindFirstChild("Hotbar")
+                if hotbarFrame then
+                    pcall(function() hotbarFrame:FindFirstChild("1").Base.ToolName.Text = "Black Flash" end)
+                    pcall(function() hotbarFrame:FindFirstChild("2").Base.ToolName.Text = "Divergent Barrage" end)
+                    pcall(function() hotbarFrame:FindFirstChild("3").Base.ToolName.Text = "Manji Kick" end)
+                    pcall(function() hotbarFrame:FindFirstChild("4").Base.ToolName.Text = "UpperKick" end)
+                end
+            end
 
             local function findGuiAndSetText()
                 local screenGui = playerGui:FindFirstChild("ScreenGui")
@@ -793,15 +787,16 @@ local function createGui()
                 end
             end
 
-            playerGui.DescendantAdded:Connect(findGuiAndSetText)
+            local healthGuiConn = playerGui.DescendantAdded:Connect(findGuiAndSetText)
+            table.insert(movesetConnections, healthGuiConn)
             findGuiAndSetText()
 
-            -- Animation & Effects Listeners
             local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
             local humanoid = character:WaitForChild("Humanoid")
 
             local function setupAnimationHook(animId, callback)
-                humanoid.AnimationPlayed:Connect(function(animationTrack)
+                local conn = humanoid.AnimationPlayed:Connect(function(animationTrack)
+                    if not config.customMovesetEnabled then return end
                     if animationTrack.Animation.AnimationId == "rbxassetid://" .. animId then
                         local Humanoid = localPlayer.Character:WaitForChild("Humanoid")
                         for _, animTrack in pairs(Humanoid:GetPlayingAnimationTracks()) do
@@ -810,6 +805,7 @@ local function createGui()
                         callback(Humanoid)
                     end
                 end)
+                table.insert(movesetConnections, conn)
             end
 
             setupAnimationHook(10468665991, function(Humanoid)
@@ -821,16 +817,18 @@ local function createGui()
                 Anim.TimePosition = 0
                 Anim:AdjustSpeed(1)
 
-                local final1 = game.ReplicatedStorage.Resources.KJEffects["KJWallCombo"].FinalImpact.Attachment:Clone()
-                final1.Parent = localPlayer.Character["Head"]
-                for _, child in ipairs(final1:GetChildren()) do
-                    if child:IsA("ParticleEmitter") then child:Emit(50) end
-                end
-                local final4 = game.ReplicatedStorage.Resources.KJEffects["KJWallCombo"].FinalImpact.Attachment:Clone()
-                final4.Parent = localPlayer.Character["Torso"]
-                for _, child in ipairs(final4:GetChildren()) do
-                    if child:IsA("ParticleEmitter") then child:Emit(3) end
-                end
+                pcall(function()
+                    local final1 = game.ReplicatedStorage.Resources.KJEffects["KJWallCombo"].FinalImpact.Attachment:Clone()
+                    final1.Parent = localPlayer.Character["Head"]
+                    for _, child in ipairs(final1:GetChildren()) do
+                        if child:IsA("ParticleEmitter") then child:Emit(50) end
+                    end
+                    local final4 = game.ReplicatedStorage.Resources.KJEffects["KJWallCombo"].FinalImpact.Attachment:Clone()
+                    final4.Parent = localPlayer.Character["Torso"]
+                    for _, child in ipairs(final4:GetChildren()) do
+                        if child:IsA("ParticleEmitter") then child:Emit(3) end
+                    end
+                end)
             end)
 
             setupAnimationHook(10466974800, function(Humanoid)
@@ -842,6 +840,7 @@ local function createGui()
                 Anim.TimePosition = 0
                 Anim:AdjustSpeed(3)
                 task.wait(1.7)
+                if not config.customMovesetEnabled then return end
                 local AnimAnim2 = Instance.new("Animation")
                 AnimAnim2.AnimationId = "rbxassetid://15957361339"
                 local Anim2 = Humanoid:LoadAnimation(AnimAnim2)
@@ -860,7 +859,7 @@ local function createGui()
                 Anim:AdjustSpeed(0)
                 Anim.TimePosition = 0.5
                 Anim:AdjustSpeed(1)
-                delay(1.8, function() Anim:Stop() end)
+                task.delay(1.8, function() if Anim.IsPlaying then Anim:Stop() end end)
             end)
 
             setupAnimationHook(12510170988, function(Humanoid)
@@ -880,12 +879,50 @@ local function createGui()
                 Anim:Play()
                 Anim:AdjustSpeed(0)
                 Anim.TimePosition = 0
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("know your place fool..", "All")
+                pcall(function()
+                    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("know your place fool..", "All")
+                end)
                 task.wait(2)
+                if not config.customMovesetEnabled then return end
                 Anim:Stop()
                 Anim:AdjustSpeed(0.5)
                 pcall(function() loadstring(game:HttpGet('https://pastebin.com/raw/JKBEpaQW'))() end)
             end)
+        else
+            -- TURN OFF MOVESET 1 (Teardown Connections & Reset Labels)
+            for _, conn in ipairs(movesetConnections) do
+                if typeof(conn) == "RBXScriptConnection" then
+                    conn:Disconnect()
+                end
+            end
+            movesetConnections = {}
+
+            local localPlayer = game.Players.LocalPlayer
+            local playerGui = localPlayer:FindFirstChild("PlayerGui")
+            if playerGui then
+                local hotbar = playerGui:FindFirstChild("Hotbar")
+                if hotbar then
+                    local backpack = hotbar:FindFirstChild("Backpack")
+                    local hotbarFrame = backpack and backpack:FindFirstChild("Hotbar")
+                    if hotbarFrame then
+                        pcall(function() hotbarFrame:FindFirstChild("1").Base.ToolName.Text = "1" end)
+                        pcall(function() hotbarFrame:FindFirstChild("2").Base.ToolName.Text = "2" end)
+                        pcall(function() hotbarFrame:FindFirstChild("3").Base.ToolName.Text = "3" end)
+                        pcall(function() hotbarFrame:FindFirstChild("4").Base.ToolName.Text = "4" end)
+                    end
+                end
+
+                local screenGui = playerGui:FindFirstChild("ScreenGui")
+                if screenGui then
+                    local magicHealthFrame = screenGui:FindFirstChild("MagicHealth")
+                    if magicHealthFrame then
+                        local textLabel = magicHealthFrame:FindFirstChild("TextLabel")
+                        if textLabel then
+                            textLabel.Text = "" -- Reset or clear custom health display text
+                        end
+                    end
+                end
+            end
         end
     end)
 
